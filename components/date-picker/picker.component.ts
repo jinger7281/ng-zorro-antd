@@ -38,6 +38,7 @@ import {
 import { slideMotion } from 'ng-zorro-antd/core/animation';
 import { NzResizeObserver } from 'ng-zorro-antd/core/resize-observers';
 
+import { Direction } from '@angular/cdk/bidi';
 import { CandyDate, CompatibleValue, wrongSortOrder } from 'ng-zorro-antd/core/time';
 import { NgStyleInterface, NzSafeAny } from 'ng-zorro-antd/core/types';
 import { DateHelperService } from 'ng-zorro-antd/i18n';
@@ -108,12 +109,7 @@ import { PREFIX_CLASS } from './util';
 
     <!-- Right operator icons -->
     <ng-template #tplRightRest>
-      <div
-        class="{{ prefixCls }}-active-bar"
-        style="position: absolute"
-        [style.width.px]="inputWidth"
-        [style.left.px]="datePickerService?.arrowLeft"
-      ></div>
+      <div class="{{ prefixCls }}-active-bar" [ngStyle]="activeBarStyle"></div>
       <span *ngIf="showClear()" class="{{ prefixCls }}-clear" (click)="onClickClear($event)">
         <i nz-icon nzType="close-circle" nzTheme="fill"></i>
       </span>
@@ -140,6 +136,7 @@ import { PREFIX_CLASS } from './util';
       <div class="ant-picker-wrapper" [nzNoAnimation]="noAnimation" [@slideMotion]="'enter'" style="position: relative;">
         <div
           class="{{ prefixCls }}-dropdown {{ dropdownClassName }}"
+          [class.ant-picker-dropdown-rtl]="dir === 'rtl'"
           [class.ant-picker-dropdown-placement-bottomLeft]="currentPositionY === 'bottom' && currentPositionX === 'start'"
           [class.ant-picker-dropdown-placement-topLeft]="currentPositionY === 'top' && currentPositionX === 'start'"
           [class.ant-picker-dropdown-placement-bottomRight]="currentPositionY === 'bottom' && currentPositionX === 'end'"
@@ -170,6 +167,7 @@ export class NzPickerComponent implements OnInit, AfterViewInit, OnChanges, OnDe
   @Input() popupStyle: NgStyleInterface | null = null;
   @Input() dropdownClassName?: string;
   @Input() suffixIcon?: string | TemplateRef<NzSafeAny>;
+  @Input() dir: Direction = 'ltr';
 
   @Output() readonly focusChange = new EventEmitter<boolean>();
   @Output() readonly valueChange = new EventEmitter<CandyDate | CandyDate[] | null>();
@@ -188,6 +186,7 @@ export class NzPickerComponent implements OnInit, AfterViewInit, OnChanges, OnDe
   destroy$ = new Subject();
   prefixCls = PREFIX_CLASS;
   inputValue!: NzSafeAny;
+  activeBarStyle: object = {};
   overlayOpen: boolean = false; // Available when "open"=undefined
   overlayPositions: ConnectionPositionPair[] = [
     {
@@ -280,15 +279,25 @@ export class NzPickerComponent implements OnInit, AfterViewInit, OnChanges, OnDe
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes.format && changes.format.currentValue) {
+    if (changes.format?.currentValue !== changes.format?.previousValue) {
       this.inputSize = Math.max(10, this.format.length) + 2;
+      this.updateInputValue();
     }
   }
 
   updateInputWidthAndArrowLeft(): void {
     this.inputWidth = this.rangePickerInputs?.first?.nativeElement.offsetWidth || 0;
+
+    const baseStyle = { position: 'absolute', width: `${this.inputWidth}px` };
     this.datePickerService.arrowLeft =
       this.datePickerService.activeInput === 'left' ? 0 : this.inputWidth + this.separatorElement?.nativeElement.offsetWidth || 0;
+
+    if (this.dir === 'rtl') {
+      this.activeBarStyle = { ...baseStyle, right: `${this.datePickerService.arrowLeft}px` };
+    } else {
+      this.activeBarStyle = { ...baseStyle, left: `${this.datePickerService.arrowLeft}px` };
+    }
+
     this.panel.cdr.markForCheck();
     this.cdr.markForCheck();
   }

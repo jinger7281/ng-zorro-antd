@@ -3,6 +3,7 @@
  * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
  */
 
+import { Direction, Directionality } from '@angular/cdk/bidi';
 import { CdkOverlayOrigin, ConnectionPositionPair } from '@angular/cdk/overlay';
 import { Platform } from '@angular/cdk/platform';
 import {
@@ -14,7 +15,9 @@ import {
   EventEmitter,
   Input,
   OnChanges,
+  OnDestroy,
   OnInit,
+  Optional,
   Output,
   Renderer2,
   SimpleChanges,
@@ -30,7 +33,9 @@ import { NzConfigKey, NzConfigService, WithConfig } from 'ng-zorro-antd/core/con
 import { warn } from 'ng-zorro-antd/core/logger';
 import { BooleanInput, NzSafeAny } from 'ng-zorro-antd/core/types';
 import { InputBoolean, isNil } from 'ng-zorro-antd/core/util';
-import { DateHelperService } from 'ng-zorro-antd/i18n';
+import { DateHelperService, NzI18nInterface, NzI18nService } from 'ng-zorro-antd/i18n';
+import { Observable, of, Subject } from 'rxjs';
+import { map, takeUntil } from 'rxjs/operators';
 
 const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'timePicker';
 
@@ -45,7 +50,7 @@ const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'timePicker';
         #inputElement
         type="text"
         [size]="inputSize"
-        [placeholder]="nzPlaceHolder || ('TimePicker.placeholder' | nzI18n)"
+        [placeholder]="nzPlaceHolder || (i18nPlaceHolder$ | async)"
         [(ngModel)]="inputValue"
         [disabled]="nzDisabled"
         (focus)="onFocus(true)"
@@ -87,7 +92,7 @@ const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'timePicker';
               [nzDisabledHours]="nzDisabledHours"
               [nzDisabledMinutes]="nzDisabledMinutes"
               [nzDisabledSeconds]="nzDisabledSeconds"
-              [nzPlaceHolder]="nzPlaceHolder || ('TimePicker.placeholder' | nzI18n)"
+              [nzPlaceHolder]="nzPlaceHolder || (i18nPlaceHolder$ | async)"
               [nzHideDisabledOptions]="nzHideDisabledOptions"
               [nzUse12Hours]="nzUse12Hours"
               [nzDefaultOpenValue]="nzDefaultOpenValue"
@@ -104,17 +109,17 @@ const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'timePicker';
     </ng-template>
   `,
   host: {
-    '[class.ant-picker]': `true`,
     '[class.ant-picker-large]': `nzSize === 'large'`,
     '[class.ant-picker-small]': `nzSize === 'small'`,
     '[class.ant-picker-disabled]': `nzDisabled`,
     '[class.ant-picker-focused]': `focused`,
+    '[class.ant-picker-rtl]': `dir === 'rtl'`,
     '(click)': 'open()'
   },
   animations: [slideMotion],
   providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: NzTimePickerComponent, multi: true }]
 })
-export class NzTimePickerComponent implements ControlValueAccessor, OnInit, AfterViewInit, OnChanges {
+export class NzTimePickerComponent implements ControlValueAccessor, OnInit, AfterViewInit, OnChanges, OnDestroy {
   readonly _nzModuleName: NzConfigKey = NZ_CONFIG_MODULE_NAME;
 
   static ngAcceptInputType_nzUse12Hours: BooleanInput;
@@ -125,6 +130,7 @@ export class NzTimePickerComponent implements ControlValueAccessor, OnInit, Afte
 
   private _onChange?: (value: Date | null) => void;
   private _onTouched?: () => void;
+  private destroy$ = new Subject<void>();
   isInit = false;
   focused = false;
   inputValue: string = '';
@@ -132,6 +138,7 @@ export class NzTimePickerComponent implements ControlValueAccessor, OnInit, Afte
   preValue: Date | null = null;
   origin!: CdkOverlayOrigin;
   inputSize?: number;
+  i18nPlaceHolder$: Observable<string | undefined> = of(undefined);
   overlayPositions: ConnectionPositionPair[] = [
     {
       originX: 'start',
@@ -141,6 +148,7 @@ export class NzTimePickerComponent implements ControlValueAccessor, OnInit, Afte
       offsetY: 3
     }
   ];
+  dir: Direction = 'ltr';
 
   @ViewChild('inputElement', { static: true }) inputRef!: ElementRef<HTMLInputElement>;
   @Input() nzSize: string | null = null;
@@ -271,16 +279,34 @@ export class NzTimePickerComponent implements ControlValueAccessor, OnInit, Afte
 
   constructor(
     public nzConfigService: NzConfigService,
+    protected i18n: NzI18nService,
     private element: ElementRef,
     private renderer: Renderer2,
     private cdr: ChangeDetectorRef,
     private dateHelper: DateHelperService,
-    private platform: Platform
-  ) {}
+    private platform: Platform,
+    private elementRef: ElementRef,
+    @Optional() private directionality: Directionality
+  ) {
+    // TODO: move to host after View Engine deprecation
+    this.elementRef.nativeElement.classList.add('ant-picker');
+  }
 
   ngOnInit(): void {
     this.inputSize = Math.max(8, this.nzFormat.length) + 2;
     this.origin = new CdkOverlayOrigin(this.element);
+
+    this.i18nPlaceHolder$ = this.i18n.localeChange.pipe(map((nzLocale: NzI18nInterface) => nzLocale.TimePicker.placeholder));
+
+    this.dir = this.directionality.value;
+    this.directionality.change?.pipe(takeUntil(this.destroy$)).subscribe((direction: Direction) => {
+      this.dir = direction;
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   ngOnChanges(changes: SimpleChanges): void {

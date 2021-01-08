@@ -140,12 +140,6 @@
           "configurations": {
             "production": {}
           }
-        },
-        "service-work": {
-          "builder": "additional-service-worker-builder:service-worker",
-          "options": {
-            "browserTarget": "ng-zorro-antd-doc:build:production"
-          }
         }
       }
     },
@@ -229,7 +223,7 @@
       "prefix": "nz",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-ng-packagr:build",
+          "builder": "@angular-devkit/build-angular:ng-packagr",
           "options": {
             "tsConfig": "components/tsconfig.lib.json",
             "project": "components/ng-package.json"

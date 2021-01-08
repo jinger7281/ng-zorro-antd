@@ -3,6 +3,7 @@
  * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
  */
 
+import { BidiModule } from '@angular/cdk/bidi';
 import { OverlayModule } from '@angular/cdk/overlay';
 import { PortalModule } from '@angular/cdk/portal';
 import { CommonModule } from '@angular/common';
@@ -18,6 +19,7 @@ import { NzPipesModule } from 'ng-zorro-antd/pipes';
 import { NzModalCloseComponent } from './modal-close.component';
 import { NzModalConfirmContainerComponent } from './modal-confirm-container.component';
 import { NzModalContainerComponent } from './modal-container.component';
+import { NzModalContentDirective } from './modal-content.directive';
 import { NzModalFooterComponent } from './modal-footer.component';
 import { NzModalFooterDirective } from './modal-footer.directive';
 import { NzModalTitleComponent } from './modal-title.component';
@@ -27,6 +29,7 @@ import { NzModalService } from './modal.service';
 @NgModule({
   imports: [
     CommonModule,
+    BidiModule,
     OverlayModule,
     NzOutletModule,
     PortalModule,
@@ -37,12 +40,13 @@ import { NzModalService } from './modal.service';
     NzNoAnimationModule,
     NzPipesModule
   ],
-  exports: [NzModalComponent, NzModalFooterDirective],
+  exports: [NzModalComponent, NzModalFooterDirective, NzModalContentDirective],
   providers: [NzModalService],
   entryComponents: [NzModalContainerComponent, NzModalConfirmContainerComponent],
   declarations: [
     NzModalComponent,
     NzModalFooterDirective,
+    NzModalContentDirective,
     NzModalCloseComponent,
     NzModalFooterComponent,
     NzModalTitleComponent,

@@ -1,3 +1,173 @@
+## [11.0.1](https://github.com/NG-ZORRO/ng-zorro-antd/compare/11.0.0...11.0.1) (2020-12-31)
+
+
+### Bug Fixes
+
+* **carousel:** remove unused patch style ([#6269](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6269)) ([3a70a2d](https://github.com/NG-ZORRO/ng-zorro-antd/commit/3a70a2dcf98ec13946e388649d4901a13dd5a1ba))
+* **collapse:** animation cannot be disabled ([#6280](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6280)) ([16fa890](https://github.com/NG-ZORRO/ng-zorro-antd/commit/16fa890bf18d8a7f7d3bb9f63ae8e0cace057226))
+* **image:** add missing imported modules ([#6273](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6273)) ([20db5d4](https://github.com/NG-ZORRO/ng-zorro-antd/commit/20db5d4ab1bae943539386559d8188e94cc49127)), closes [#6271](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6271)
+* **image:** image fit content when drag released ([#6262](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6262)) ([07ae66a](https://github.com/NG-ZORRO/ng-zorro-antd/commit/07ae66a60285f9debf7176684ff66335f97c5a31))
+* **modal:** mask is not set with the `nzZindex` property ([#6294](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6294)) ([54d294a](https://github.com/NG-ZORRO/ng-zorro-antd/commit/54d294a6bec56494992fefe6b2898f7af957df3b)), closes [#6288](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6288)
+* **select:** change order for clear and arrow ([#6245](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6245)) ([c822073](https://github.com/NG-ZORRO/ng-zorro-antd/commit/c8220737c25bf4670a697729eaadc8e762e2404f)), closes [#5989](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5989)
+* **slider:** fix slider style + reverse marks if reversed slider ([#6006](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6006)) ([fa06415](https://github.com/NG-ZORRO/ng-zorro-antd/commit/fa064156ef59673556a62d741ae640494eefae32))
+* **table:** data is not updated when pagination exists ([#6298](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6298)) ([1f2ab41](https://github.com/NG-ZORRO/ng-zorro-antd/commit/1f2ab41fae89d0e674102c12b3960bfc7bddebab)), closes [#6272](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6272)
+* **tabs:** fix clickable area of the anchor element ([#6278](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6278)) ([0694079](https://github.com/NG-ZORRO/ng-zorro-antd/commit/069407959850995f1a5ecbef0d71fa00c69b99a5))
+* **tabs:** index only changed by router event when nzLinkRouter ([#6293](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6293)) ([ca1b861](https://github.com/NG-ZORRO/ng-zorro-antd/commit/ca1b861b410f92a60f214f34b39c2c5d3ae9ea63))
+
+
+
+# [11.0.0](https://github.com/NG-ZORRO/ng-zorro-antd/compare/10.2.1...11.0.0) (2020-12-21)
+
+## Highlights
+
+### RTL Support
+
+Set the dir attribute on the document body or html tag.
+```html
+<html dir="rtl"></html>
+```
+
+Or use Angular CDK bidi module for bi-directional.
+
+```typescript
+import {BidiModule} from '@angular/cdk/bidi';
+```
+
+Super thanks to [@saeedrahimi](https://github.com/saeedrahimi) [@hdm91](https://github.com/hdm91) [@HDaghash](https://github.com/HDaghash) [@hmdnikoo](https://github.com/hmdnikoo) for contributing this!
+
+### New Image component
+
+Used to handle progressive loading of images; failure fallback, and preview of image(s).
+
+Super thanks to [@stygian-desolator](https://github.com/stygian-desolator) for contributing this!
+
+### New Graph experimental component
+
+Support customized multi-level graph rendering.
+
+### New Tree View component
+
+The previous Tree already contains many common features, and to handle more customizable scenarios we developed a more basic Tree View component with higher ability of customization and better control over performance.
+
+### New built-in Aliyun theme
+
+```less
+@import "~ng-zorro-antd/ng-zorro-antd.aliyun.less";
+```
+
+### Bug Fixes
+
+* **tree:** fix tree styles ([#6198](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6198)) ([a481a15](https://github.com/NG-ZORRO/ng-zorro-antd/commit/a481a156278047472e1324b87df896b37246a0ed))
+* **button:** only warn about deprecated value when used ([#6193](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6193)) ([40c644a](https://github.com/NG-ZORRO/ng-zorro-antd/commit/40c644aa8fe92ccfaf26220a872b0995874b2569)), closes [#6191](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6191) [#6187](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6187)
+* **i18n:** fix Ukrainian i18n file ([#6236](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6236)) ([551c7a2](https://github.com/NG-ZORRO/ng-zorro-antd/commit/551c7a24c1ae0cec9f15f61bcaa12b9057de4bd0))
+* **image:** fix RTL direction and props ([#6227](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6227)) ([3978e0f](https://github.com/NG-ZORRO/ng-zorro-antd/commit/3978e0f48c3924fdbfda54e69438ea794b29a8ec))
+* **list:** fix template rendering order ([#6232](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6232)) ([4324011](https://github.com/NG-ZORRO/ng-zorro-antd/commit/43240113c66c583e806f87b84b669a6ddb1faffe)), closes [#6229](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6229)
+* **modal:** fix `nzOkDanger` in confirm mode ([#6214](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6214)) ([ebe2869](https://github.com/NG-ZORRO/ng-zorro-antd/commit/ebe2869d1b9459a8e02e3993d8a93483fa531f62))
+* **select:** fix XSS vulnerabilities ([#6222](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6222)) ([a393b89](https://github.com/NG-ZORRO/ng-zorro-antd/commit/a393b89bf82eece5b0586592d709629865b27b3a)), closes [#6209](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6209)
+* **table:** false nzFrontPagination hides pagination ([#6201](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6201)) ([8029ef4](https://github.com/NG-ZORRO/ng-zorro-antd/commit/8029ef47d6eeaf43aa5875f8a8034205dc9c69bb)), closes [#6196](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6196)
+* **time-picker:** placeholder not update with i18n changes ([#6069](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6069)) ([f34840b](https://github.com/NG-ZORRO/ng-zorro-antd/commit/f34840bf2a4c5eb2d2facba0fa00068f6fa2bd5e))
+
+
+### Features
+
+* **all:** add RTL support to all ng-zorro-antd ([#4703](https://github.com/NG-ZORRO/ng-zorro-antd/issues/4703)) ([860dfed](https://github.com/NG-ZORRO/ng-zorro-antd/commit/860dfeddcf02fc7e775615244827cb224d1aa8be)), closes [#4704](https://github.com/NG-ZORRO/ng-zorro-antd/issues/4704) [#1762](https://github.com/NG-ZORRO/ng-zorro-antd/issues/1762) [#5261](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5261)
+* **date-picker:** add `nzShowNow` ([#6160](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6160)) ([99e3117](https://github.com/NG-ZORRO/ng-zorro-antd/commit/99e3117b70853c0aa4f6b4f475b031734840f10f)), closes [#6146](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6146)
+* **graph:** add graph component ([#6053](https://github.com/NG-ZORRO/ng-zorro-antd/pull/6053)) ([e69303f](https://github.com/NG-ZORRO/ng-zorro-antd/commit/e69303f828132cb62263867abe8afefc600f15f6))
+* **image:** add image component ([#6154](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6154)) ([83dfdf9](https://github.com/NG-ZORRO/ng-zorro-antd/commit/83dfdf97b5a716e1cc9424d645dfc6713fe4ba64))
+* **tree-view:** add tree-view component ([#6161](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6161)) ([05d58de](https://github.com/NG-ZORRO/ng-zorro-antd/commit/05d58de21f8a3e4d3e2bf4d4333de95a2c71e1ed)), closes [#5976](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5976) [#5809](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5809) [#5739](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5739) [#5736](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5736) [#5519](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5519) [#5446](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5446) [#5152](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5152) [#4694](https://github.com/NG-ZORRO/ng-zorro-antd/issues/4694) [#4472](https://github.com/NG-ZORRO/ng-zorro-antd/issues/4472) [#3832](https://github.com/NG-ZORRO/ng-zorro-antd/issues/3832) [#2785](https://github.com/NG-ZORRO/ng-zorro-antd/issues/2785) [#2744](https://github.com/NG-ZORRO/ng-zorro-antd/issues/2744) [#6199](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6199)
+* **schematics:** make ng-add schematics chainable ([#6203](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6203)) ([d1e76f3](https://github.com/NG-ZORRO/ng-zorro-antd/commit/d1e76f3d8d41b0e3b9f01887e4805ff43f48d0fa))
+
+### BREAKING CHANGES
+
+**date-picker**
+  - `[nzMode]` does not support `NzDateMode[]` type any more, please adjust it manually.
+
+**modal**
+  - `[nzGetContainer]` has been removed, please remove it manually.
+  - `open` method in `NzModalRef` has been removed, please remove it manually.
+
+**tabs**
+  - `[nzShowPagination]` input has been removed, please remove it manually.
+  - `(nzOnPrevClick)` output has been removed, please remove it manually.
+  - `(nzOnNextClick)` output has been removed, please remove it manually.
+  - `a[nz-tab-link]` selector has been removed, please use `ng-template[nzTabLink] > a[nz-tab-link]` instead.
+
+<a name="10.2.1"></a>
+## [10.2.1](https://github.com/NG-ZORRO/ng-zorro-antd/compare/10.1.2...10.2.1) (2020-12-11)
+
+
+### Bug Fixes
+
+* **date-picker,time-picker:** prevent losing input focus ([#6171](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6171)) ([a055905](https://github.com/NG-ZORRO/ng-zorro-antd/commit/a055905)), closes [#6170](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6170)
+* **description:** fix label colon not working ([#6155](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6155)) ([47065f6](https://github.com/NG-ZORRO/ng-zorro-antd/commit/47065f6)), closes [#6151](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6151)
+* **mention:** scroll to focus when arrow up or down ([#6137](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6137)) ([13f2281](https://github.com/NG-ZORRO/ng-zorro-antd/commit/13f2281)), closes [#5995](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5995)
+* **modal:** add nzOkDanger to avoid old button style ([#6157](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6157)) ([f22024e](https://github.com/NG-ZORRO/ng-zorro-antd/commit/f22024e)), closes [#6111](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6111)
+* **select:** activate first item or first selected item ([#6148](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6148)) ([a456c93](https://github.com/NG-ZORRO/ng-zorro-antd/commit/a456c93)), closes [#6041](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6041)
+* **table:** showPagination in ngIf when nzHideOnSinglePage ([#6133](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6133)) ([fbe13c2](https://github.com/NG-ZORRO/ng-zorro-antd/commit/fbe13c2)), closes [#6080](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6080)
+* **tabs:** keyboard events in extra areas trigger navigation ([#6173](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6173)) ([375366f](https://github.com/NG-ZORRO/ng-zorro-antd/commit/375366f)), closes [#6139](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6139)
+* **transfer:** fix only filtered data in `nzRenderList` ([#6169](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6169)) ([17d43fb](https://github.com/NG-ZORRO/ng-zorro-antd/commit/17d43fb)), closes [#5641](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5641)
+
+<a name="10.2.0"></a>
+# [10.2.0](https://github.com/NG-ZORRO/ng-zorro-antd/compare/10.1.2...10.2.0) (2020-12-01)
+
+
+### Bug Fixes
+
+* **cascader:** restore its value after cancel search ([#6088](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6088)) ([22ddc60](https://github.com/NG-ZORRO/ng-zorro-antd/commit/22ddc60))
+* **cascader:** scroll active options into view ([#6082](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6082)) ([b42b51f](https://github.com/NG-ZORRO/ng-zorro-antd/commit/b42b51f)), closes [#6037](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6037)
+* **date-picker:** clear wrong date input after closing panel ([#6079](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6079)) ([edffdee](https://github.com/NG-ZORRO/ng-zorro-antd/commit/edffdee)), closes [#6070](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6070)
+* **date-picker:** display error in dynamic switching `nzMode` ([#6125](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6125)) ([220a590](https://github.com/NG-ZORRO/ng-zorro-antd/commit/220a590)), closes [#6052](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6052)
+* **descriptions:** fix DOM structure ([#6112](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6112)) ([5e42d71](https://github.com/NG-ZORRO/ng-zorro-antd/commit/5e42d71))
+* **tree:** fix indent line styles ([#6123](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6123)) ([2f8edbc](https://github.com/NG-ZORRO/ng-zorro-antd/commit/2f8edbc))
+* **tree-select:** selector cannot focus ([#6073](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6073)) ([032bd01](https://github.com/NG-ZORRO/ng-zorro-antd/commit/032bd01)), closes [#6063](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6063)
+* **upload:** fix prevent trigger submit when click list button ([#6096](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6096)) ([123982f](https://github.com/NG-ZORRO/ng-zorro-antd/commit/123982f)), closes [#6095](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6095)
+
+
+### Features
+
+* **drawer:** add `nzDrawerContent` directive ([#6085](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6085)) ([6fc0683](https://github.com/NG-ZORRO/ng-zorro-antd/commit/6fc0683))
+* **drawer:** support nzVisible two-way binding ([#6013](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6013)) ([caab8be](https://github.com/NG-ZORRO/ng-zorro-antd/commit/caab8be)), closes [#5999](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5999)
+* **input:** textarea supports character count ([#6104](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6104)) ([601ab50](https://github.com/NG-ZORRO/ng-zorro-antd/commit/601ab50)), closes [#5907](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5907)
+* **modal:** add `nzModalContent` directive ([#6081](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6081)) ([6594414](https://github.com/NG-ZORRO/ng-zorro-antd/commit/6594414))
+* **pagination:** support global config ([#6043](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6043)) ([3c55b7c](https://github.com/NG-ZORRO/ng-zorro-antd/commit/3c55b7c)), closes [#6042](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6042)
+* **steps:** supports enable and disable ([#6101](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6101)) ([b87e72d](https://github.com/NG-ZORRO/ng-zorro-antd/commit/b87e72d)), closes [#5579](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5579)
+
+_Deprecated_
+
+- modal
+  * Usage `<ng-content></ng-content>` is deprecated, which will be removed in 12.0.0. Please instead use `<ng-template nzModalContent></ng-template>` to declare the content of the modal.
+- drawer
+  * Usage `<ng-content></ng-content>` is deprecated, which will be removed in 12.0.0. Please instead use `<ng-template nzDrawerContent></ng-template>` to declare the content of the drawer.
+
+
+<a name="10.1.2"></a>
+## [10.1.2](https://github.com/NG-ZORRO/ng-zorro-antd/compare/10.1.1...10.1.2) (2020-11-16)
+
+
+### Bug Fixes
+
+* **i18n:** include missing language exports ([#6061](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6061)) ([6543a80](https://github.com/NG-ZORRO/ng-zorro-antd/commit/6543a80))
+* **cascader:** fix broken nzChangeOnSelect ([#6049](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6049)) ([1575bae](https://github.com/NG-ZORRO/ng-zorro-antd/commit/1575bae)), closes [#6048](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6048)
+* **code-editor:** memorize cursor position and selections ([#6044](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6044)) ([84f520d](https://github.com/NG-ZORRO/ng-zorro-antd/commit/84f520d)), closes [#6038](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6038)
+* **typography:** ellipsis does not work with copy action ([#6058](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6058)) ([858fff9](https://github.com/NG-ZORRO/ng-zorro-antd/commit/858fff9)), closes [#6057](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6057)
+
+
+
+<a name="10.1.1"></a>
+## [10.1.1](https://github.com/NG-ZORRO/ng-zorro-antd/compare/10.1.0...10.1.1) (2020-11-09)
+
+
+### Bug Fixes
+
+* **breadcrumb:** patch last-child's style indule a is included ([#5994](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5994)) ([50f0744](https://github.com/NG-ZORRO/ng-zorro-antd/commit/50f0744)), closes [#5942](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5942)
+* **cascader:**  menu closing behavoir ([#6023](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6023)) ([22aea7e](https://github.com/NG-ZORRO/ng-zorro-antd/commit/22aea7e)), closes [#6022](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6022)
+* **cascader:** search bar styles error ([#6030](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6030)) ([9c4424f](https://github.com/NG-ZORRO/ng-zorro-antd/commit/9c4424f)), closes [#6020](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6020)
+* **select:** dropdown can be opened when disabled ([#6008](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6008)) ([79c52ea](https://github.com/NG-ZORRO/ng-zorro-antd/commit/79c52ea)), closes [#6005](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6005) [#6007](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6007)
+* **tabs:** `nzTabBarGutter` is not work in vertical position ([#5998](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5998)) ([516bf97](https://github.com/NG-ZORRO/ng-zorro-antd/commit/516bf97)), closes [#5396](https://github.com/NG-ZORRO/ng-zorro-antd/issues/5396)
+* **tabs:** ink-bar does not render correctly in some cases ([#6016](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6016)) ([8af418b](https://github.com/NG-ZORRO/ng-zorro-antd/commit/8af418b)), closes [#6009](https://github.com/NG-ZORRO/ng-zorro-antd/issues/6009) [#4802](https://github.com/NG-ZORRO/ng-zorro-antd/issues/4802) [#3999](https://github.com/NG-ZORRO/ng-zorro-antd/issues/3999)
+
+
+
 <a name="10.1.0"></a>
 # [10.1.0](https://github.com/NG-ZORRO/ng-zorro-antd/compare/10.0.2...10.1.0) (2020-10-30)
 

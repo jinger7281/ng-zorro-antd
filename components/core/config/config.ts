@@ -3,6 +3,7 @@
  * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
  */
 
+import { Direction } from '@angular/cdk/bidi';
 import { InjectionToken, TemplateRef, Type } from '@angular/core';
 
 import { SafeUrl } from '@angular/platform-browser';
@@ -35,6 +36,7 @@ export interface NzConfig {
   modal?: ModalConfig;
   notification?: NotificationConfig;
   pageHeader?: PageHeaderConfig;
+  pagination?: PaginationConfig;
   progress?: ProgressConfig;
   rate?: RateConfig;
   space?: SpaceConfig;
@@ -46,6 +48,7 @@ export interface NzConfig {
   tree?: TreeConfig;
   treeSelect?: TreeSelectConfig;
   typography?: TypographyConfig;
+  image?: ImageConfig;
 }
 
 export interface SelectConfig {
@@ -96,7 +99,9 @@ export interface CodeEditorConfig {
   useStaticLoading?: boolean;
 
   onLoad?(): void;
+
   onFirstEditorInit?(): void;
+
   onInit?(): void;
 }
 
@@ -146,6 +151,7 @@ export interface DrawerConfig {
   nzMask?: boolean;
   nzMaskClosable?: boolean;
   nzCloseOnNavigation?: boolean;
+  nzDirection?: Direction;
 }
 
 export interface EmptyConfig {
@@ -169,12 +175,14 @@ export interface MessageConfig {
   nzMaxStack?: number;
   nzPauseOnHover?: boolean;
   nzTop?: number | string;
+  nzDirection?: Direction;
 }
 
 export interface ModalConfig {
   nzMask?: boolean;
   nzMaskClosable?: boolean;
   nzCloseOnNavigation?: boolean;
+  nzDirection?: Direction;
 }
 
 export interface NotificationConfig extends MessageConfig {
@@ -185,6 +193,14 @@ export interface NotificationConfig extends MessageConfig {
 
 export interface PageHeaderConfig {
   nzGhost: boolean;
+}
+
+export interface PaginationConfig {
+  nzSize?: 'default' | 'small';
+  nzPageSizeOptions?: number[];
+  nzShowSizeChanger?: boolean;
+  nzShowQuickJumper?: boolean;
+  nzSimple?: boolean;
 }
 
 export interface ProgressConfig {
@@ -270,6 +286,14 @@ export interface TypographyConfig {
   nzCopyIcons: [NzTSType, NzTSType];
   nzEditTooltip?: null | NzTSType;
   nzEditIcon: NzTSType;
+}
+
+export interface ImageConfig {
+  nzFallback?: string;
+  nzPlaceholder?: string;
+  nzDisablePreview?: string;
+  nzCloseOnNavigation?: boolean;
+  nzDirection?: Direction;
 }
 
 export type NzConfigKey = keyof NzConfig;
