@@ -10,7 +10,7 @@ import { CompatibleDate, NzDateMode, RangePartType } from './standard-types';
 
 @Injectable()
 export class DatePickerService implements OnDestroy {
-  initialValue?: CompatibleValue;
+  initialValue!: CompatibleValue;
   value!: CompatibleValue;
   activeDate?: CompatibleValue;
   activeInput: RangePartType = 'left';
@@ -21,13 +21,12 @@ export class DatePickerService implements OnDestroy {
   emitValue$ = new Subject<void>();
   inputPartChange$ = new Subject<RangePartType>();
 
-  initValue(): void {
-    if (this.isRange) {
-      this.setActiveDate([]);
-      this.value = this.initialValue = [];
-    } else {
-      this.value = this.initialValue = null;
+  initValue(reset: boolean = false): void {
+    if (reset) {
+      this.initialValue = this.isRange ? [] : null;
     }
+
+    this.setValue(this.initialValue);
   }
 
   hasValue(value: CompatibleValue = this.value): boolean {
@@ -46,14 +45,14 @@ export class DatePickerService implements OnDestroy {
     }
   }
 
-  setActiveDate(value: CompatibleValue, allowSameInTwoPanel: boolean = false, mode: NormalizedMode = 'month'): void {
+  setActiveDate(value: CompatibleValue, hasTimePicker: boolean = false, mode: NormalizedMode = 'month'): void {
     const parentPanels: { [key in NzDateMode]?: NormalizedMode } = {
       date: 'month',
       month: 'year',
       year: 'decade'
     };
     if (this.isRange) {
-      this.activeDate = normalizeRangeValue(value as CandyDate[], allowSameInTwoPanel, parentPanels[mode]);
+      this.activeDate = normalizeRangeValue(value as CandyDate[], hasTimePicker, parentPanels[mode], this.activeInput);
     } else {
       this.activeDate = cloneDate(value);
     }

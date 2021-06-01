@@ -64,15 +64,15 @@ describe('Animation', () => {
     flushMicrotasks();
 
     const modalContentElement = overlayContainerElement.querySelector('.ant-modal');
-    expect(modalContentElement!.classList).toContain('zoom-enter');
-    expect(modalContentElement!.classList).toContain('zoom-enter-active');
+    expect(modalContentElement!.classList).toContain('ant-zoom-enter');
+    expect(modalContentElement!.classList).toContain('ant-zoom-enter-active');
     tick(500);
 
     modalRef.close();
     fixture.detectChanges();
     flushMicrotasks();
-    expect(modalContentElement!.classList).toContain('zoom-leave');
-    expect(modalContentElement!.classList).toContain('zoom-leave-active');
+    expect(modalContentElement!.classList).toContain('ant-zoom-leave');
+    expect(modalContentElement!.classList).toContain('ant-zoom-leave-active');
     flush();
   }));
 });
@@ -582,6 +582,22 @@ describe('NzModal', () => {
     const modal = overlayContainerElement.querySelector('nz-modal-container') as HTMLElement;
 
     expect(modal.classList).toContain('test-wrap-class');
+
+    modalRef.close();
+    fixture.detectChanges();
+    flush();
+  }));
+
+  it('should set the nzCentered of the modal', fakeAsync(() => {
+    const modalRef = modalService.create({
+      nzCentered: true,
+      nzContent: TestWithModalContentComponent
+    });
+    fixture.detectChanges();
+
+    const modal = overlayContainerElement.querySelector('nz-modal-container') as HTMLElement;
+
+    expect(modal.classList).toContain('ant-modal-centered');
 
     modalRef.close();
     fixture.detectChanges();
@@ -1151,7 +1167,7 @@ describe('NzModal', () => {
             onClick: () => {
               return new Promise(resolve => {
                 setTimeout(() => {
-                  resolve();
+                  resolve(null);
                 }, 200);
               });
             }
@@ -1166,7 +1182,7 @@ describe('NzModal', () => {
             onClick: () => {
               return new Promise(resolve => {
                 setTimeout(() => {
-                  resolve();
+                  resolve(null);
                 }, 200);
               });
             }
@@ -1211,6 +1227,7 @@ describe('NzModal', () => {
       fixture.detectChanges();
       expect((overlayContainerElement.querySelector('.ant-modal') as HTMLDivElement).style.width).toBe('416px');
       expect(modalRef.getConfig().nzMaskClosable).toBe(false);
+      expect(modalRef.getConfig().nzCentered).toBe(false);
       expect(overlayContainerElement.querySelectorAll('nz-modal-confirm-container').length).toBe(1);
       expect(overlayContainerElement.querySelector('.ant-modal-confirm-title')!.textContent).toBe('Test Title');
       expect(overlayContainerElement.querySelector('.ant-modal-confirm-content')!.textContent).toBe('Test Content');
@@ -1309,6 +1326,22 @@ describe('NzModal', () => {
       flush();
     }));
 
+    it('should set nzCentered', fakeAsync(() => {
+      const modalRef = modalService.confirm({
+        nzCentered: true
+      });
+      fixture.detectChanges();
+
+      expect(modalRef.getConfig().nzCentered).toBe(true);
+
+      const modal = overlayContainerElement.querySelector('nz-modal-confirm-container') as HTMLElement;
+      expect(modal.classList).toContain('ant-modal-centered');
+
+      modalRef.close();
+      fixture.detectChanges();
+      flush();
+    }));
+
     it('should open confirm with component', () => {
       const modalRef = modalService.confirm({
         nzContent: TestWithModalContentComponent,
@@ -1360,6 +1393,26 @@ describe('NzModal', () => {
       flush();
 
       expect(closeSpy).toHaveBeenCalled();
+      expect(overlayContainerElement.querySelectorAll('nz-modal-container').length).toBe(0);
+    }));
+
+    it('should set nzVisible to false when implicitly closed', fakeAsync(() => {
+      const closeSpy = jasmine.createSpy('close spy');
+      componentInstance.nzModalComponent.afterClose.subscribe(closeSpy);
+      expect(closeSpy).not.toHaveBeenCalled();
+
+      componentInstance.isVisible = true;
+      componentFixture.detectChanges();
+      flush();
+
+      expect(overlayContainerElement.querySelectorAll('nz-modal-container').length).toBe(1);
+
+      modalService.closeAll();
+      componentFixture.detectChanges();
+      flush();
+
+      expect(closeSpy).toHaveBeenCalled();
+      expect(componentInstance.isVisible).toBe(false);
       expect(overlayContainerElement.querySelectorAll('nz-modal-container').length).toBe(0);
     }));
 

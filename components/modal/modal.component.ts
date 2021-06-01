@@ -24,12 +24,14 @@ import { NzButtonType } from 'ng-zorro-antd/button';
 import { warnDeprecation } from 'ng-zorro-antd/core/logger';
 import { BooleanInput, NzSafeAny } from 'ng-zorro-antd/core/types';
 import { InputBoolean } from 'ng-zorro-antd/core/util';
-import { Observable } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 import { NzModalContentDirective } from './modal-content.directive';
 import { NzModalFooterDirective } from './modal-footer.directive';
 import { NzModalLegacyAPI } from './modal-legacy-api';
 import { NzModalRef } from './modal-ref';
+import { NzModalTitleDirective } from './modal-title.directive';
 import { ModalButtonOptions, ModalOptions, ModalTypes, OnClickCallback, StyleObjectLike } from './modal-types';
 import { NzModalService } from './modal.service';
 import { getConfigFromComponent } from './utils';
@@ -38,7 +40,9 @@ import { getConfigFromComponent } from './utils';
   selector: 'nz-modal',
   exportAs: 'nzModal',
   template: `
-    <ng-template><ng-content></ng-content></ng-template>
+    <ng-template>
+      <ng-content></ng-content>
+    </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -55,6 +59,7 @@ export class NzModalComponent<T = NzSafeAny, R = NzSafeAny> implements OnChanges
   static ngAcceptInputType_nzKeyboard: BooleanInput;
   static ngAcceptInputType_nzNoAnimation: BooleanInput;
   static ngAcceptInputType_nzOkDanger: BooleanInput;
+  static ngAcceptInputType_nzCentered: BooleanInput;
 
   @Input() @InputBoolean() nzMask?: boolean;
   @Input() @InputBoolean() nzMaskClosable?: boolean;
@@ -67,6 +72,7 @@ export class NzModalComponent<T = NzSafeAny, R = NzSafeAny> implements OnChanges
   @Input() @InputBoolean() nzCancelLoading: boolean = false;
   @Input() @InputBoolean() nzKeyboard: boolean = true;
   @Input() @InputBoolean() nzNoAnimation = false;
+  @Input() @InputBoolean() nzCentered = false;
   @Input() nzContent?: string | TemplateRef<{}> | Type<T>;
   @Input() nzComponentParams?: T;
   @Input() nzFooter?: string | TemplateRef<{}> | Array<ModalButtonOptions<T>> | null;
@@ -102,7 +108,17 @@ export class NzModalComponent<T = NzSafeAny, R = NzSafeAny> implements OnChanges
   @Output() readonly nzVisibleChange = new EventEmitter<boolean>();
 
   @ViewChild(TemplateRef, { static: true }) contentTemplateRef!: TemplateRef<{}>;
-  @ContentChild(NzModalContentDirective, { static: true, read: TemplateRef }) contentFromContentChild!: TemplateRef<NzSafeAny>;
+
+  @ContentChild(NzModalTitleDirective, { static: true, read: TemplateRef })
+  set modalTitle(value: TemplateRef<NzSafeAny>) {
+    if (value) {
+      this.setTitleWithTemplate(value);
+    }
+  }
+
+  @ContentChild(NzModalContentDirective, { static: true, read: TemplateRef })
+  contentFromContentChild!: TemplateRef<NzSafeAny>;
+
   @ContentChild(NzModalFooterDirective, { static: true, read: TemplateRef })
   set modalFooter(value: TemplateRef<NzSafeAny>) {
     if (value) {
@@ -111,6 +127,7 @@ export class NzModalComponent<T = NzSafeAny, R = NzSafeAny> implements OnChanges
   }
 
   private modalRef: NzModalRef | null = null;
+  private destroy$ = new Subject<void>();
 
   get afterOpen(): Observable<void> {
     // Observable alias for nzAfterOpen
@@ -133,6 +150,14 @@ export class NzModalComponent<T = NzSafeAny, R = NzSafeAny> implements OnChanges
     if (!this.modalRef) {
       const config = this.getConfig();
       this.modalRef = this.modal.create(config);
+
+      // When the modal is implicitly closed (e.g. closeAll) the nzVisible needs to be set to the correct value and emit.
+      this.modalRef.afterClose
+        .asObservable()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(() => {
+          this.close();
+        });
     }
   }
 
@@ -170,6 +195,18 @@ export class NzModalComponent<T = NzSafeAny, R = NzSafeAny> implements OnChanges
 
   getModalRef(): NzModalRef | null {
     return this.modalRef;
+  }
+
+  private setTitleWithTemplate(templateRef: TemplateRef<{}>): void {
+    this.nzTitle = templateRef;
+    if (this.modalRef) {
+      // If modalRef already created, set the title in next tick
+      Promise.resolve().then(() => {
+        this.modalRef!.updateConfig({
+          nzTitle: this.nzTitle
+        });
+      });
+    }
   }
 
   private setFooterWithTemplate(templateRef: TemplateRef<{}>): void {
@@ -218,5 +255,7 @@ export class NzModalComponent<T = NzSafeAny, R = NzSafeAny> implements OnChanges
 
   ngOnDestroy(): void {
     this.modalRef?._finishDialogClose();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

@@ -48,6 +48,7 @@ const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'timePicker';
     <div class="ant-picker-input">
       <input
         #inputElement
+        [attr.id]="nzId"
         type="text"
         [size]="inputSize"
         [placeholder]="nzPlaceHolder || (i18nPlaceHolder$ | async)"
@@ -72,6 +73,7 @@ const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'timePicker';
     <ng-template
       cdkConnectedOverlay
       nzConnectedOverlay
+      [cdkConnectedOverlayHasBackdrop]="nzBackdrop"
       [cdkConnectedOverlayPositions]="overlayPositions"
       [cdkConnectedOverlayOrigin]="origin"
       [cdkConnectedOverlayOpen]="nzOpen"
@@ -98,6 +100,8 @@ const NZ_CONFIG_MODULE_NAME: NzConfigKey = 'timePicker';
               [nzDefaultOpenValue]="nzDefaultOpenValue"
               [nzAddOn]="nzAddOn"
               [nzClearText]="nzClearText"
+              [nzNowText]="nzNowText"
+              [nzOkText]="nzOkText"
               [nzAllowEmpty]="nzAllowEmpty"
               [(ngModel)]="value"
               (ngModelChange)="onPanelValueChange($event)"
@@ -151,11 +155,14 @@ export class NzTimePickerComponent implements ControlValueAccessor, OnInit, Afte
   dir: Direction = 'ltr';
 
   @ViewChild('inputElement', { static: true }) inputRef!: ElementRef<HTMLInputElement>;
+  @Input() nzId: string | null = null;
   @Input() nzSize: string | null = null;
   @Input() @WithConfig() nzHourStep: number = 1;
   @Input() @WithConfig() nzMinuteStep: number = 1;
   @Input() @WithConfig() nzSecondStep: number = 1;
   @Input() @WithConfig() nzClearText: string = 'clear';
+  @Input() @WithConfig() nzNowText: string = '';
+  @Input() @WithConfig() nzOkText: string = '';
   @Input() @WithConfig() nzPopupClassName: string = '';
   @Input() nzPlaceHolder = '';
   @Input() nzAddOn?: TemplateRef<void>;
@@ -174,6 +181,7 @@ export class NzTimePickerComponent implements ControlValueAccessor, OnInit, Afte
   @Input() @WithConfig() @InputBoolean() nzAllowEmpty: boolean = true;
   @Input() @InputBoolean() nzDisabled = false;
   @Input() @InputBoolean() nzAutoFocus = false;
+  @Input() @WithConfig() nzBackdrop = false;
 
   emitValue(value: Date | null): void {
     this.setValue(value, true);

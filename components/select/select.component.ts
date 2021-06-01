@@ -10,7 +10,6 @@ import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedOverlayPositionChange }
 import { Platform } from '@angular/cdk/platform';
 import {
   AfterContentInit,
-  AfterViewInit,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
@@ -31,10 +30,12 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
+
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { slideMotion } from 'ng-zorro-antd/core/animation';
 import { NzConfigKey, NzConfigService, WithConfig } from 'ng-zorro-antd/core/config';
 import { NzNoAnimationDirective } from 'ng-zorro-antd/core/no-animation';
+import { reqAnimFrame } from 'ng-zorro-antd/core/polyfill';
 import { BooleanInput, NzSafeAny, OnChangeType, OnTouchedType } from 'ng-zorro-antd/core/types';
 import { InputBoolean, isNotNil } from 'ng-zorro-antd/core/util';
 import { BehaviorSubject, combineLatest, merge, Subject } from 'rxjs';
@@ -46,7 +47,7 @@ import { NzFilterOptionType, NzSelectItemInterface, NzSelectModeType, NzSelectOp
 
 const defaultFilterOption: NzFilterOptionType = (searchValue: string, item: NzSelectItemInterface): boolean => {
   if (item && item.nzLabel) {
-    return item.nzLabel.toLowerCase().indexOf(searchValue.toLowerCase()) > -1;
+    return item.nzLabel.toString().toLowerCase().indexOf(searchValue.toLowerCase()) > -1;
   } else {
     return false;
   }
@@ -74,6 +75,7 @@ export type NzSelectSizeType = 'large' | 'default' | 'small';
     <nz-select-top-control
       cdkOverlayOrigin
       #origin="cdkOverlayOrigin"
+      [nzId]="nzId"
       [open]="nzOpen"
       [disabled]="nzDisabled"
       [mode]="nzMode"
@@ -90,7 +92,6 @@ export type NzSelectSizeType = 'large' | 'default' | 'small';
       [listOfTopItem]="listOfTopItem"
       (inputValueChange)="onInputValueChange($event)"
       (tokenize)="onTokenSeparate($event)"
-      (animationEnd)="updateCdkConnectedOverlayPositions()"
       (deleteItem)="onItemDelete($event)"
       (keydown)="onKeyDown($event)"
     ></nz-select-top-control>
@@ -108,6 +109,7 @@ export type NzSelectSizeType = 'large' | 'default' | 'small';
     <ng-template
       cdkConnectedOverlay
       nzConnectedOverlay
+      [cdkConnectedOverlayHasBackdrop]="nzBackdrop"
       [cdkConnectedOverlayMinWidth]="$any(nzDropdownMatchSelectWidth ? null : triggerWidth)"
       [cdkConnectedOverlayWidth]="$any(nzDropdownMatchSelectWidth ? triggerWidth : null)"
       [cdkConnectedOverlayOrigin]="origin"
@@ -159,7 +161,7 @@ export type NzSelectSizeType = 'large' | 'default' | 'small';
     '(click)': 'onHostClick()'
   }
 })
-export class NzSelectComponent implements ControlValueAccessor, OnInit, AfterViewInit, OnDestroy, AfterContentInit, OnChanges {
+export class NzSelectComponent implements ControlValueAccessor, OnInit, OnDestroy, AfterContentInit, OnChanges {
   readonly _nzModuleName: NzConfigKey = NZ_CONFIG_MODULE_NAME;
 
   static ngAcceptInputType_nzAllowClear: BooleanInput;
@@ -172,6 +174,7 @@ export class NzSelectComponent implements ControlValueAccessor, OnInit, AfterVie
   static ngAcceptInputType_nzDisabled: BooleanInput;
   static ngAcceptInputType_nzOpen: BooleanInput;
 
+  @Input() nzId: string | null = null;
   @Input() nzSize: NzSelectSizeType = 'default';
   @Input() nzOptionHeightPx = 32;
   @Input() nzOptionOverflowSize = 8;
@@ -204,6 +207,7 @@ export class NzSelectComponent implements ControlValueAccessor, OnInit, AfterVie
   @Input() @InputBoolean() nzServerSearch = false;
   @Input() @InputBoolean() nzDisabled = false;
   @Input() @InputBoolean() nzOpen = false;
+  @Input() @WithConfig<boolean>() @InputBoolean() nzBackdrop = false;
   @Input() nzOptions: NzSelectOptionInterface[] = [];
 
   @Input()
@@ -312,7 +316,7 @@ export class NzSelectComponent implements ControlValueAccessor, OnInit, AfterVie
     }
     const activatedItem = listOfContainerItem.find(item => this.compareWith(item.nzValue, this.listOfValue[0])) || listOfContainerItem[0];
     this.activatedValue = (activatedItem && activatedItem.nzValue) || null;
-    let listOfGroupLabel: Array<string | TemplateRef<NzSafeAny> | null> = [];
+    let listOfGroupLabel: Array<string | number | TemplateRef<NzSafeAny> | null> = [];
     if (this.isReactiveDriven) {
       listOfGroupLabel = [...new Set(this.nzOptions.filter(o => o.groupLabel).map(o => o.groupLabel!))];
     } else {
@@ -478,14 +482,17 @@ export class NzSelectComponent implements ControlValueAccessor, OnInit, AfterVie
 
   updateCdkConnectedOverlayStatus(): void {
     if (this.platform.isBrowser && this.originElement.nativeElement) {
-      this.triggerWidth = this.originElement.nativeElement.getBoundingClientRect().width;
+      reqAnimFrame(() => {
+        this.triggerWidth = this.originElement.nativeElement.getBoundingClientRect().width;
+        this.cdr.markForCheck();
+      });
     }
   }
 
   updateCdkConnectedOverlayPositions(): void {
-    if (this.cdkConnectedOverlay.overlayRef) {
-      this.cdkConnectedOverlay.overlayRef.updatePosition();
-    }
+    reqAnimFrame(() => {
+      this.cdkConnectedOverlay?.overlayRef?.updatePosition();
+    });
   }
 
   constructor(
@@ -551,7 +558,7 @@ export class NzSelectComponent implements ControlValueAccessor, OnInit, AfterVie
       const listOfTransformedItem = listOfOptions.map(item => {
         return {
           template: item.label instanceof TemplateRef ? item.label : null,
-          nzLabel: typeof item.label === 'string' ? item.label : null,
+          nzLabel: typeof item.label === 'string' || typeof item.label === 'number' ? item.label : null,
           nzValue: item.value,
           nzDisabled: item.disabled || false,
           nzHide: item.hide || false,
@@ -602,11 +609,14 @@ export class NzSelectComponent implements ControlValueAccessor, OnInit, AfterVie
       this.cdr.detectChanges();
     });
 
-    this.dir = this.directionality.value;
-  }
+    this.nzConfigService
+      .getConfigChangeEventForComponent('select')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.cdr.markForCheck();
+      });
 
-  ngAfterViewInit(): void {
-    this.updateCdkConnectedOverlayStatus();
+    this.dir = this.directionality.value;
   }
 
   ngAfterContentInit(): void {
@@ -638,6 +648,7 @@ export class NzSelectComponent implements ControlValueAccessor, OnInit, AfterVie
   }
 
   ngOnDestroy(): void {
+    this.focusMonitor.stopMonitoring(this.elementRef);
     this.destroy$.next();
     this.destroy$.complete();
   }

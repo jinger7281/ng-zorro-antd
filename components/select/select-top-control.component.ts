@@ -19,7 +19,6 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { zoomMotion } from 'ng-zorro-antd/core/animation';
 import { NzNoAnimationDirective } from 'ng-zorro-antd/core/no-animation';
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
 import { NzSelectSearchComponent } from './select-search.component';
@@ -29,7 +28,6 @@ import { NzSelectItemInterface, NzSelectModeType, NzSelectTopControlItemType } f
   selector: 'nz-select-top-control',
   exportAs: 'nzSelectTopControl',
   preserveWhitespaces: false,
-  animations: [zoomMotion],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   template: `
@@ -37,6 +35,7 @@ import { NzSelectItemInterface, NzSelectModeType, NzSelectTopControlItemType } f
     <ng-container [ngSwitch]="mode">
       <ng-container *ngSwitchCase="'default'">
         <nz-select-search
+          [nzId]="nzId"
           [disabled]="disabled"
           [value]="inputValue!"
           [showInput]="showSearch"
@@ -60,19 +59,16 @@ import { NzSelectItemInterface, NzSelectModeType, NzSelectTopControlItemType } f
         <!--multiple or tags mode-->
         <nz-select-item
           *ngFor="let item of listOfSlicedItem; trackBy: trackValue"
-          [@zoomMotion]
-          [@.disabled]="noAnimation?.nzNoAnimation"
-          [nzNoAnimation]="noAnimation?.nzNoAnimation"
           [removeIcon]="removeIcon"
           [label]="item.nzLabel"
           [disabled]="item.nzDisabled || disabled"
           [contentTemplateOutlet]="item.contentTemplateOutlet"
           [deletable]="true"
           [contentTemplateOutletContext]="item.contentTemplateOutletContext"
-          (@zoomMotion.done)="onAnimationEnd()"
           (delete)="onDeleteItem(item.contentTemplateOutletContext)"
         ></nz-select-item>
         <nz-select-search
+          [nzId]="nzId"
           [disabled]="disabled"
           [value]="inputValue!"
           [autofocus]="autofocus"
@@ -91,6 +87,7 @@ import { NzSelectItemInterface, NzSelectModeType, NzSelectTopControlItemType } f
   }
 })
 export class NzSelectTopControlComponent implements OnChanges {
+  @Input() nzId: string | null = null;
   @Input() showSearch = false;
   @Input() placeHolder: string | TemplateRef<NzSafeAny> | null = null;
   @Input() open = false;
@@ -105,7 +102,6 @@ export class NzSelectTopControlComponent implements OnChanges {
   @Input() tokenSeparators: string[] = [];
   @Output() readonly tokenize = new EventEmitter<string[]>();
   @Output() readonly inputValueChange = new EventEmitter<string>();
-  @Output() readonly animationEnd = new EventEmitter<void>();
   @Output() readonly deleteItem = new EventEmitter<NzSelectItemInterface>();
   @ViewChild(NzSelectSearchComponent) nzSelectSearchComponent!: NzSelectSearchComponent;
   listOfSlicedItem: NzSelectTopControlItemType[] = [];
@@ -195,10 +191,6 @@ export class NzSelectTopControlComponent implements OnChanges {
     if (!this.disabled && !item.nzDisabled) {
       this.deleteItem.next(item);
     }
-  }
-
-  onAnimationEnd(): void {
-    this.animationEnd.next();
   }
 
   constructor(private elementRef: ElementRef, @Host() @Optional() public noAnimation?: NzNoAnimationDirective) {

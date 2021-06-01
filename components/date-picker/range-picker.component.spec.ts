@@ -60,7 +60,29 @@ describe('NzRangePickerComponent', () => {
       openPickerByClickTrigger();
       expect(getPickerContainer()).not.toBeNull();
 
-      dispatchMouseEvent(document.body, 'click');
+      triggerInputBlur();
+      fixture.detectChanges();
+      tick(500);
+      fixture.detectChanges();
+      expect(getPickerContainer()).toBeNull();
+    }));
+
+    it('should open by click and close by tab', fakeAsync(() => {
+      fixtureInstance.useSuite = 4;
+
+      fixture.detectChanges();
+      expect(getPickerContainer()).toBeNull();
+      openPickerByClickTrigger();
+      expect(getPickerContainer()).not.toBeNull();
+
+      getRangePickerRightInput(fixture.debugElement).focus();
+      fixture.detectChanges();
+      tick(500);
+      fixture.detectChanges();
+      expect(getPickerContainer()).not.toBeNull();
+
+      triggerInputBlur();
+      getRegularPickerInput(fixture.debugElement).focus();
       fixture.detectChanges();
       tick(500);
       fixture.detectChanges();
@@ -71,7 +93,7 @@ describe('NzRangePickerComponent', () => {
       fixture.detectChanges();
       openPickerByClickTrigger();
 
-      dispatchMouseEvent(document.body, 'click');
+      triggerInputBlur();
       fixture.detectChanges();
       tick(500);
       fixture.detectChanges();
@@ -216,7 +238,7 @@ describe('NzRangePickerComponent', () => {
       openPickerByClickTrigger();
       expect(nzOnOpenChange).toHaveBeenCalledWith(true);
 
-      dispatchMouseEvent(document.body, 'click');
+      triggerInputBlur();
       fixture.detectChanges();
       tick(500);
       fixture.detectChanges();
@@ -239,7 +261,7 @@ describe('NzRangePickerComponent', () => {
       fixture.detectChanges();
       openPickerByClickTrigger();
       expect(getHeaderMonthBtn().textContent!.indexOf('1') > -1).toBeTruthy();
-      expect(queryFromOverlay('.ant-picker-panel:last-child .ant-picker-header-month-btn').textContent!.indexOf('11') > -1).toBeTruthy();
+      expect(queryFromRightPanel('.ant-picker-header-month-btn').textContent!.indexOf('2') > -1).toBeTruthy();
     }));
 
     it('should support nzSeparator', fakeAsync(() => {
@@ -312,6 +334,32 @@ describe('NzRangePickerComponent', () => {
       const result = (nzOnChange.calls.allArgs()[0] as Date[][])[0];
       expect((result[0] as Date).getDate()).toBe(+leftText);
     }));
+
+    it('should support nzInline', fakeAsync(() => {
+      const nzOnChange = spyOn(fixtureInstance, 'modelValueChange');
+      fixtureInstance.modelValue = [new Date('2018-11-11'), new Date('2018-11-11')];
+      fixtureInstance.nzInline = true;
+      fixture.detectChanges();
+      flush();
+      fixture.detectChanges();
+      overlayContainerElement = debugElement.nativeElement as HTMLLIElement;
+
+      const left = getFirstCell('left'); // Use the first cell
+      const leftText = left.textContent!.trim();
+      dispatchMouseEvent(left, 'click');
+      fixture.detectChanges();
+      flush();
+      fixture.detectChanges();
+      expect(nzOnChange).not.toHaveBeenCalled();
+      // now the cursor focus on right
+      const right = getFirstCell('right');
+      dispatchMouseEvent(right, 'click');
+      fixture.detectChanges();
+      flush();
+      fixture.detectChanges();
+      const result = (nzOnChange.calls.allArgs()[0] as Date[][])[0];
+      expect((result[0] as Date).getDate()).toBe(+leftText);
+    }));
   }); // /general api testing
 
   describe('panel switch and move forward/afterward', () => {
@@ -355,7 +403,7 @@ describe('NzRangePickerComponent', () => {
       dispatchMouseEvent(getSuperNextBtn('left'), 'click');
       fixture.detectChanges();
 
-      dispatchMouseEvent(document.body, 'click');
+      triggerInputBlur();
       fixture.detectChanges();
       tick(500);
       fixture.detectChanges();
@@ -411,7 +459,7 @@ describe('NzRangePickerComponent', () => {
       const left = getFirstCell('left'); // Use the first cell
       dispatchMouseEvent(left, 'click');
       fixture.detectChanges();
-      const rightInNextMonth = queryFromOverlay('.ant-picker-panel:last-child table tr:nth-child(3) td.ant-picker-cell');
+      const rightInNextMonth = queryFromRightPanel('table tr:nth-child(3) td.ant-picker-cell');
       dispatchMouseEvent(rightInNextMonth, 'mouseenter');
       fixture.detectChanges();
       expect(rightInNextMonth.classList.contains('ant-picker-cell-range-hover-end')).toBeTruthy();
@@ -429,7 +477,7 @@ describe('NzRangePickerComponent', () => {
       fixture.detectChanges();
       expect(getRangePickerRightInput(fixture.debugElement) === document.activeElement).toBeTruthy();
 
-      dispatchMouseEvent(document.body, 'click');
+      triggerInputBlur();
       fixture.detectChanges();
       tick(500);
       fixture.detectChanges();
@@ -455,7 +503,7 @@ describe('NzRangePickerComponent', () => {
       expect(okButton.getAttribute('disabled')).not.toBeNull();
 
       // Click to choose a hour
-      dispatchMouseEvent(queryFromOverlay('.ant-picker-time-panel-column .ant-picker-time-panel-cell:first-child'), 'click');
+      dispatchMouseEvent(queryFromRightPanel('.ant-picker-time-panel-column .ant-picker-time-panel-cell:first-child'), 'click');
       fixture.detectChanges();
       flush();
       fixture.detectChanges();
@@ -473,7 +521,7 @@ describe('NzRangePickerComponent', () => {
       fixtureInstance.nzShowTime = { nzFormat: 'HH:mm' };
       fixture.detectChanges();
       openPickerByClickTrigger();
-      expect(overlayContainerElement.querySelectorAll('.ant-picker-time-panel-column').length).toBe(2);
+      expect(overlayContainerElement.querySelectorAll('.ant-picker-panel:first-child .ant-picker-time-panel-column').length).toBe(2);
     }));
 
     it('should support nzDisabledTime and nzShowTime.nzHideDisabledOptions', fakeAsync(() => {
@@ -510,7 +558,7 @@ describe('NzRangePickerComponent', () => {
       ).toBeTruthy();
 
       // Close left panel
-      dispatchMouseEvent(document.body, 'click');
+      triggerInputBlur();
       fixture.detectChanges();
       tick(500);
       fixture.detectChanges();
@@ -518,15 +566,15 @@ describe('NzRangePickerComponent', () => {
       // Right time picker
       openRightPickerByClickTrigger();
       expect(
-        queryFromOverlay('.ant-picker-time-panel-column li:nth-child(4)').classList.contains('ant-picker-time-panel-cell-disabled')
+        queryFromRightPanel('.ant-picker-time-panel-column li:nth-child(4)').classList.contains('ant-picker-time-panel-cell-disabled')
       ).toBeTruthy();
       expect(
-        queryFromOverlay('.ant-picker-time-panel-column:nth-child(2) li:nth-child(3)').classList.contains(
+        queryFromRightPanel('.ant-picker-time-panel-column:nth-child(2) li:nth-child(3)').classList.contains(
           'ant-picker-time-panel-cell-disabled'
         )
       ).toBeTruthy();
       expect(
-        queryFromOverlay('.ant-picker-time-panel-column:nth-child(3) li:nth-child(2)').classList.contains(
+        queryFromRightPanel('.ant-picker-time-panel-column:nth-child(3) li:nth-child(2)').classList.contains(
           'ant-picker-time-panel-cell-disabled'
         )
       ).toBeTruthy();
@@ -536,7 +584,7 @@ describe('NzRangePickerComponent', () => {
       fixture.detectChanges();
 
       // Close left panel
-      dispatchMouseEvent(document.body, 'click');
+      triggerInputBlur('right');
       fixture.detectChanges();
       tick(500);
       fixture.detectChanges();
@@ -547,15 +595,15 @@ describe('NzRangePickerComponent', () => {
       expect(+queryFromOverlay('.ant-picker-time-panel-column:nth-child(3) li:first-child').textContent!.trim()).toBe(1);
 
       // Close left panel
-      dispatchMouseEvent(document.body, 'click');
+      triggerInputBlur();
       fixture.detectChanges();
       tick(500);
       fixture.detectChanges();
       openRightPickerByClickTrigger();
       // Right time picker
-      expect(+queryFromOverlay('.ant-picker-time-panel-column:nth-child(1) li:first-child').textContent!.trim()).toBe(4);
-      expect(+queryFromOverlay('.ant-picker-time-panel-column:nth-child(2) li:first-child').textContent!.trim()).toBe(3);
-      expect(+queryFromOverlay('.ant-picker-time-panel-column:nth-child(3) li:first-child').textContent!.trim()).toBe(2);
+      expect(+queryFromRightPanel('.ant-picker-time-panel-column:nth-child(1) li:first-child').textContent!.trim()).toBe(4);
+      expect(+queryFromRightPanel('.ant-picker-time-panel-column:nth-child(2) li:first-child').textContent!.trim()).toBe(3);
+      expect(+queryFromRightPanel('.ant-picker-time-panel-column:nth-child(3) li:first-child').textContent!.trim()).toBe(2);
     }));
 
     it('should focus to invalid input when sorted', fakeAsync(() => {
@@ -656,7 +704,6 @@ describe('NzRangePickerComponent', () => {
       dispatchMouseEvent(startDate, 'click');
       fixture.detectChanges();
       expect(startDate.classList.contains('ant-picker-cell-selected')).toBeTruthy();
-      expect(queryFromOverlay('.ant-picker-panel:last-child td.ant-picker-cell-selected')).toBeFalsy(); // End panel should have no one to be selected
     }));
 
     it('should display expected date when the range values are the same day (include the scenario of timepicker)', fakeAsync(() => {
@@ -801,7 +848,7 @@ describe('NzRangePickerComponent', () => {
       fixture.detectChanges();
       expect(getHeaderYearBtn('left').textContent).toContain('2027');
       // panel month will increase 1
-      expect(getHeaderMonthBtn().textContent).toContain('10');
+      expect(getHeaderMonthBtn().textContent).toContain('9');
     }));
   }); // /specified date picker testing
 
@@ -842,7 +889,7 @@ describe('NzRangePickerComponent', () => {
       dispatchMouseEvent(leftThirdRowCell, 'click');
       fixture.detectChanges();
       expect(leftThirdRow.classList.contains('ant-picker-week-panel-row-selected')).toBeTruthy();
-      const rightThirdRowCell = queryFromOverlay('.ant-picker-panel:last-child table tr:nth-child(3) td.ant-picker-cell');
+      const rightThirdRowCell = queryFromRightPanel('table tr:nth-child(3) td.ant-picker-cell');
       dispatchMouseEvent(rightThirdRowCell, 'click');
       fixture.detectChanges();
       tick(500);
@@ -864,7 +911,7 @@ describe('NzRangePickerComponent', () => {
       const left = getFirstCell('left'); // Use the first cell
       dispatchMouseEvent(left, 'click');
       fixture.detectChanges();
-      const rightThirdRowCell = queryFromOverlay('.ant-picker-panel:last-child table tr:nth-child(3) td.ant-picker-cell');
+      const rightThirdRowCell = queryFromRightPanel('table tr:nth-child(3) td.ant-picker-cell');
       dispatchMouseEvent(rightThirdRowCell, 'mouseenter');
       fixture.detectChanges();
       expect(rightThirdRowCell.classList.contains('ant-picker-cell-range-hover-end')).toBeTruthy();
@@ -884,7 +931,7 @@ describe('NzRangePickerComponent', () => {
       const left = getFirstCell('left');
       dispatchMouseEvent(left, 'click');
       fixture.detectChanges();
-      const rightThirdRowCell = queryFromOverlay('.ant-picker-panel:last-child table tr:nth-child(3) td.ant-picker-cell');
+      const rightThirdRowCell = queryFromRightPanel('table tr:nth-child(3) td.ant-picker-cell');
       dispatchMouseEvent(rightThirdRowCell, 'mouseenter');
       fixture.detectChanges();
       expect(rightThirdRowCell.classList.contains('ant-picker-cell-range-hover-end')).toBeTruthy();
@@ -905,9 +952,9 @@ describe('NzRangePickerComponent', () => {
     return queryFromOverlay('.ant-picker-panel:first-child td.ant-picker-cell-selected .ant-picker-cell-inner') as HTMLElement;
   }
 
-  // function getSecondSelectedDayCell(): HTMLElement {
-  //   return queryFromOverlay('.ant-picker-panel:last-child td.ant-picker-cell-selected .ant-picker-cell-inner') as HTMLElement;
-  // }
+  function getRegularPickerInput(fixtureDebugElement: DebugElement): HTMLInputElement {
+    return fixtureDebugElement.queryAll(By.css(`.${PREFIX_CLASS}-input input`))[2].nativeElement as HTMLInputElement;
+  }
 
   function getPreBtn(part: RangePartType): HTMLElement {
     return queryFromOverlay(`.ant-picker-panel:${getCssIndex(part)} .${PREFIX_CLASS}-header-prev-btn`);
@@ -942,6 +989,10 @@ describe('NzRangePickerComponent', () => {
     return overlayContainerElement.querySelector(selector) as HTMLElement;
   }
 
+  function queryFromRightPanel(selector: string): HTMLElement {
+    return overlayContainerElement.querySelector('.ant-picker-panel:last-child')!.querySelector(selector) as HTMLElement;
+  }
+
   function openPickerByClickTrigger(): void {
     dispatchMouseEvent(getPickerInput(fixture.debugElement), 'click');
     fixture.detectChanges();
@@ -962,6 +1013,14 @@ describe('NzRangePickerComponent', () => {
     fixture.detectChanges();
     tick(500);
     fixture.detectChanges();
+  }
+
+  function triggerInputBlur(part: 'left' | 'right' = 'left'): void {
+    if (part === 'left') {
+      dispatchFakeEvent(getPickerInput(fixture.debugElement), 'focusout');
+    } else {
+      dispatchFakeEvent(getRangePickerRightInput(fixture.debugElement), 'focusout');
+    }
   }
 });
 
@@ -992,6 +1051,7 @@ describe('NzRangePickerComponent', () => {
         [nzMode]="nzMode"
         [nzRanges]="nzRanges"
         [nzDefaultPickerValue]="nzDefaultPickerValue"
+        [nzInline]="nzInline"
         (nzOnPanelChange)="nzOnPanelChange($event)"
         (nzOnCalendarChange)="nzOnCalendarChange($event)"
         [nzShowTime]="nzShowTime"
@@ -1003,16 +1063,22 @@ describe('NzRangePickerComponent', () => {
       <ng-template #tplExtraFooter>TEST_EXTRA_FOOTER</ng-template>
 
       <!-- Suite 2 -->
-      <!-- use another picker to avoid nzOpen's side-effects beacuse nzOpen act as "true" if used -->
+      <!-- use another picker to avoid nzOpen's side-effects because nzOpen act as "true" if used -->
       <nz-range-picker *ngSwitchCase="2" [nzOpen]="nzOpen"></nz-range-picker>
 
       <!-- Suite 3 -->
       <nz-range-picker *ngSwitchCase="3" nzOpen [(ngModel)]="modelValue"></nz-range-picker>
+
+      <!-- Suite 4 -->
+      <ng-container *ngSwitchCase="4">
+        <nz-range-picker [(ngModel)]="modelValue"></nz-range-picker>
+        <nz-date-picker [ngModel]="singleValue"></nz-date-picker>
+      </ng-container>
     </ng-container>
   `
 })
 class NzTestRangePickerComponent {
-  useSuite!: 1 | 2 | 3;
+  useSuite!: 1 | 2 | 3 | 4;
   @ViewChild('tplDateRender', { static: true }) tplDateRender!: TemplateRef<Date>;
   @ViewChild('tplExtraFooter', { static: true }) tplExtraFooter!: TemplateRef<void>;
 
@@ -1031,6 +1097,7 @@ class NzTestRangePickerComponent {
   modelValueChange(_: Date[]): void {}
   nzDefaultPickerValue!: Array<Date | null>;
   nzSeparator!: string;
+  nzInline: boolean = false;
 
   nzDateRender: any; // tslint:disable-line:no-any
   nzShowTime: boolean | object = false;
@@ -1047,4 +1114,7 @@ class NzTestRangePickerComponent {
 
   // --- Suite 2
   nzOpen: boolean = false;
+
+  // --- Suite 4
+  singleValue!: Date;
 }

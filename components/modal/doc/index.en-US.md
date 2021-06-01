@@ -33,6 +33,7 @@ The dialog is currently divided into 2 modes, `normal mode` and `confirm box mod
 | nzAfterClose      | Specify a EventEmitter that will be emitted when modal is closed completely (Can listen for parameters passed in the close/destroy method) | EventEmitter | - |
 | nzBodyStyle       | Body style for modal body element. Such as height, padding etc. | `object` | - |
 | nzCancelText      | Text of the Cancel button. <i>Set to null to show no cancel button (this value is invalid if the nzFooter parameter is used in normal mode)</i> | `string` | Cancel |
+| nzCentered        | Centered Modal | `boolean` | `false` |
 | nzClosable        | Whether a close (x) button is visible on top right of the modal dialog or not. <i>Invalid value in confirm box mode (default will be hidden)</i> | `boolean` | `true` |
 | nzOkLoading       | Whether to apply loading visual effect for OK button or not | `boolean` | `false` |
 | nzCancelLoading   | Whether to apply loading visual effect for Cancel button or not | `boolean` | `false` |
@@ -42,7 +43,7 @@ The dialog is currently divided into 2 modes, `normal mode` and `confirm box mod
 | nzKeyboard        | Whether support press esc to close | `boolean` | `true` |
 | nzMask            | Whether show mask or not. | `boolean` | `true` | ✅ |
 | nzMaskClosable    | Whether to close the modal dialog when the mask (area outside the modal) is clicked | `boolean` | `true` | ✅ |
-| nzCloseOnNavigation    | Whether to close the modal when the navigation history changes | `boolean` | `true` | ✅ |
+| nzCloseOnNavigation    | Whether to close the modal when the user goes backwards/forwards in history. Note that this usually doesn't include clicking on links (unless the user is using the HashLocationStrategy). | `boolean` | `true` | ✅ |
 | nzDirection        | Direction of the text in the modal | `'ltr' \| 'rtl'` | - | ✅ |
 | nzMaskStyle       | Style for modal's mask element. | `object` | - |
 | nzOkText          | Text of the OK button. <i>Set to null to show no ok button (this value is invalid if the nzFooter parameter is used in normal mode)</i> | `string` | OK |
@@ -156,6 +157,22 @@ nzFooter: [{
 ```
 
 The above configuration items can also be changed in real-time to trigger the button behavior change.
+
+### [nzModalTitle]
+
+Customize the title.
+
+```html
+<div *nzModalTitle>
+  Custom Modal Title
+</div>
+
+<!-- or -->
+
+<ng-template [nzModalTitle]>
+  Custom Modal Title
+</ng-template>
+```
 
 ### [nzModalFooter]
 

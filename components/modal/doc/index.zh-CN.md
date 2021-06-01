@@ -34,6 +34,7 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 | nzAfterClose      | Modal 完全关闭后的回调，可监听close/destroy方法传入的参数 | EventEmitter | - |
 | nzBodyStyle       | Modal body 样式 | `object` | - |
 | nzCancelText      | 取消按钮文字。<i>设为 null 表示不显示取消按钮（若在普通模式下使用了 nzFooter 参数，则该值无效）</i> | `string` | 取消 |
+| nzCentered        | 垂直居中展示 Modal | `boolean` | `false` |
 | nzClosable        | 是否显示右上角的关闭按钮。<i>确认框模式下该值无效（默认会被隐藏）</i> | `boolean` | `true` |
 | nzOkLoading       | 确定按钮 loading | `boolean` | `false` |
 | nzCancelLoading   | 取消按钮 loading | `boolean` | `false` |
@@ -43,7 +44,7 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 | nzKeyboard        | 是否支持键盘esc关闭 | `boolean` | `true` |
 | nzMask            | 是否展示遮罩 | `boolean` | `true` | ✅ |
 | nzMaskClosable    | 点击蒙层是否允许关闭 | `boolean` | `true` | ✅ |
-| nzCloseOnNavigation    | 导航历史变化时是否关闭模态框 | `boolean` | `true` | ✅ |
+| nzCloseOnNavigation    | 当用户在历史中前进/后退时是否关闭模态框。注意，这通常不包括点击链接（除非用户使用HashLocationStrategy）。 | `boolean` | `true` | ✅ |
 | nzDirection        | 文字方向 | `'ltr' \| 'rtl'` | - | ✅ |
 | nzMaskStyle       | 遮罩样式 | `object` | - |
 | nzOkText          | 确认按钮文字。<i>设为 null 表示不显示确认按钮（若在普通模式下使用了 nzFooter 参数，则该值无效）</i> | `string` | 确定 |
@@ -157,6 +158,22 @@ nzFooter: [{
 ```
 
 以上配置项也可在运行态实时改变，来触发按钮行为改变。
+
+### [nzModalTitle]
+
+自定义标题。
+
+```html
+<div *nzModalTitle>
+  Custom Modal Title
+</div>
+
+<!-- or -->
+
+<ng-template [nzModalTitle]>
+  Custom Modal Title
+</ng-template>
+```
 
 ### [nzModalFooter]
 
