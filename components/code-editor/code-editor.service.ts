@@ -4,12 +4,14 @@
  */
 
 import { DOCUMENT } from '@angular/common';
-import { Inject, Injectable } from '@angular/core';
+import { Inject, Injectable, OnDestroy } from '@angular/core';
+import { BehaviorSubject, Observable, of as observableOf, Subject, Subscription } from 'rxjs';
+import { map, tap } from 'rxjs/operators';
+
 import { CodeEditorConfig, NzConfigService } from 'ng-zorro-antd/core/config';
 import { PREFIX, warn } from 'ng-zorro-antd/core/logger';
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
-import { BehaviorSubject, Observable, of as observableOf, Subject } from 'rxjs';
-import { map, tap } from 'rxjs/operators';
+
 import { JoinedEditorOptions, NzCodeEditorLoadingStatus } from './typings';
 
 declare const monaco: NzSafeAny;
@@ -27,13 +29,14 @@ function tryTriggerFunc(fn?: (...args: NzSafeAny[]) => NzSafeAny): (...args: NzS
 @Injectable({
   providedIn: 'root'
 })
-export class NzCodeEditorService {
+export class NzCodeEditorService implements OnDestroy {
   private document: Document;
   private firstEditorInitialized = false;
   private loaded$ = new Subject<boolean>();
   private loadingStatus = NzCodeEditorLoadingStatus.UNLOAD;
   private option: JoinedEditorOptions = {};
   private config: CodeEditorConfig;
+  private subscription: Subscription | null;
 
   option$ = new BehaviorSubject<JoinedEditorOptions>(this.option);
 
@@ -44,12 +47,17 @@ export class NzCodeEditorService {
     this.config = { ...globalConfig };
     this.option = this.config.defaultEditorOption || {};
 
-    this.nzConfigService.getConfigChangeEventForComponent(NZ_CONFIG_MODULE_NAME).subscribe(() => {
+    this.subscription = this.nzConfigService.getConfigChangeEventForComponent(NZ_CONFIG_MODULE_NAME).subscribe(() => {
       const newGlobalConfig: NzSafeAny = this.nzConfigService.getConfigForComponent(NZ_CONFIG_MODULE_NAME);
       if (newGlobalConfig) {
         this._updateDefaultOption(newGlobalConfig.defaultEditorOption);
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.subscription!.unsubscribe();
+    this.subscription = null;
   }
 
   private _updateDefaultOption(option: JoinedEditorOptions): void {

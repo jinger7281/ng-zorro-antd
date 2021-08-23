@@ -21,8 +21,6 @@ const RESPONSIVE_SM = 1200;
         [nzPopoverContent]="menu"
       ></i>
 
-      <app-join *ngIf="language === 'zh'"></app-join>
-
       <div nz-row style="flex-flow: nowrap">
         <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="6" [nzLg]="6" [nzXl]="5" [nzXXl]="4">
           <app-logo></app-logo>
@@ -101,11 +99,12 @@ export class HeaderComponent implements OnChanges {
   isMobile = false;
   mode = 'horizontal';
   responsive: null | 'narrow' | 'crowded' = null;
-  oldVersionList = ['10.2.x', '9.3.x', '8.5.x', '7.5.x', '1.8.x', '0.7.x', '0.5.x'];
+  oldVersionList = ['11.4.x', '10.2.x', '9.3.x', '8.5.x', '7.5.x', '1.8.x', '0.7.x', '0.5.x'];
   currentVersion = VERSION.full;
   nextDirection: 'ltr' | 'rtl' = 'rtl';
 
-  constructor(private nzConfigService: NzConfigService) {}
+  constructor(private nzConfigService: NzConfigService) { }
+
   onChangeVersion(version: string): void {
     this.versionChange.emit(version);
   }
