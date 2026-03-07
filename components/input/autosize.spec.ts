@@ -1,6 +1,11 @@
-import { Component, NgZone, ViewEncapsulation } from '@angular/core';
-import { ComponentFixture, fakeAsync, flush, TestBed, tick, waitForAsync } from '@angular/core/testing';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
+
+import { Component, NgZone, provideZoneChangeDetection } from '@angular/core';
+import { ComponentFixture, fakeAsync, flush, TestBed, tick } from '@angular/core/testing';
+import { FormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 
 import { dispatchFakeEvent, MockNgZone } from 'ng-zorro-antd/core/testing';
@@ -11,27 +16,21 @@ import { NzInputModule } from './input.module';
 describe('autoresize', () => {
   let zone: MockNgZone;
 
-  beforeEach(
-    waitForAsync(() => {
-      TestBed.configureTestingModule({
-        imports: [NzInputModule, FormsModule, ReactiveFormsModule],
-        declarations: [
-          NzTestInputWithTextAreaAutoSizeStringComponent,
-          NzTestInputWithTextAreaAutoSizeObjectComponent,
-          NzTestInputWithTextAreaAutoSizeBooleanComponent
-        ],
-        providers: [
-          {
-            provide: NgZone,
-            useFactory: () => {
-              zone = new MockNgZone();
-              return zone;
-            }
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        // todo: use zoneless
+        provideZoneChangeDetection(),
+        {
+          provide: NgZone,
+          useFactory: () => {
+            zone = new MockNgZone();
+            return zone;
           }
-        ]
-      }).compileComponents();
-    })
-  );
+        }
+      ]
+    });
+  });
 
   describe('single input', () => {
     describe('textarea autosize string', () => {
@@ -47,6 +46,7 @@ describe('autoresize', () => {
         textarea = fixture.debugElement.query(By.directive(NzAutosizeDirective)).nativeElement;
         autosize = fixture.debugElement.query(By.directive(NzAutosizeDirective)).injector.get(NzAutosizeDirective);
       });
+
       it('should resize the textarea based on its ngModel', fakeAsync(() => {
         let previousHeight = textarea.clientHeight;
         testComponent.value = `
@@ -63,11 +63,12 @@ describe('autoresize', () => {
         autosize.resizeToFitContent();
         zone.simulateZoneExit();
         fixture.detectChanges();
-        expect(textarea.clientHeight).toBeGreaterThan(
-          previousHeight,
-          'Expected textarea to have grown with added content.'
-        );
-        expect(textarea.clientHeight).toBe(textarea.scrollHeight, 'Expected textarea height to match its scrollHeight');
+        expect(textarea.clientHeight)
+          .withContext('Expected textarea to have grown with added content.')
+          .toBeGreaterThan(previousHeight);
+        expect(textarea.clientHeight)
+          .withContext('Expected textarea height to match its scrollHeight')
+          .toBe(textarea.scrollHeight);
 
         previousHeight = textarea.clientHeight;
         testComponent.value += `
@@ -83,11 +84,12 @@ describe('autoresize', () => {
         autosize.resizeToFitContent(true);
         zone.simulateZoneExit();
         fixture.detectChanges();
-        expect(textarea.clientHeight).toBeGreaterThan(
-          previousHeight,
-          'Expected textarea to have grown with added content.'
-        );
-        expect(textarea.clientHeight).toBe(textarea.scrollHeight, 'Expected textarea height to match its scrollHeight');
+        expect(textarea.clientHeight)
+          .withContext('Expected textarea to have grown with added content.')
+          .toBeGreaterThan(previousHeight);
+        expect(textarea.clientHeight)
+          .withContext('Expected textarea height to match its scrollHeight')
+          .toBe(textarea.scrollHeight);
       }));
 
       it('should trigger a resize when the window is resized', fakeAsync(() => {
@@ -99,6 +101,7 @@ describe('autoresize', () => {
         expect(autosize.resizeToFitContent).toHaveBeenCalled();
       }));
     });
+
     describe('textarea autosize object', () => {
       let fixture: ComponentFixture<NzTestInputWithTextAreaAutoSizeObjectComponent>;
       let testComponent: NzTestInputWithTextAreaAutoSizeObjectComponent;
@@ -112,6 +115,7 @@ describe('autoresize', () => {
         textarea = fixture.debugElement.query(By.directive(NzAutosizeDirective)).nativeElement;
         autosize = fixture.debugElement.query(By.directive(NzAutosizeDirective)).injector.get(NzAutosizeDirective);
       });
+
       it('should set a min-height based on minRows', fakeAsync(() => {
         autosize.resizeToFitContent(true);
         fixture.detectChanges();
@@ -123,10 +127,9 @@ describe('autoresize', () => {
         flush();
         fixture.detectChanges();
         autosize.resizeToFitContent(true);
-        expect(parseInt(textarea.style.minHeight as string, 10)).toBeGreaterThan(
-          previousMinHeight,
-          'Expected increased min-height with minRows increase.'
-        );
+        expect(parseInt(textarea.style.minHeight as string, 10))
+          .withContext('Expected increased min-height with minRows increase.')
+          .toBeGreaterThan(previousMinHeight);
       }));
 
       it('should set a max-height based on maxRows', fakeAsync(() => {
@@ -140,12 +143,12 @@ describe('autoresize', () => {
         flush();
         fixture.detectChanges();
         autosize.resizeToFitContent(true);
-        expect(parseInt(textarea.style.maxHeight as string, 10)).toBeGreaterThan(
-          previousMaxHeight,
-          'Expected increased max-height with maxRows increase.'
-        );
+        expect(parseInt(textarea.style.maxHeight as string, 10))
+          .withContext('Expected increased max-height with maxRows increase.')
+          .toBeGreaterThan(previousMaxHeight);
       }));
     });
+
     describe('textarea autosize boolean', () => {
       let fixture: ComponentFixture<NzTestInputWithTextAreaAutoSizeBooleanComponent>;
       let testComponent: NzTestInputWithTextAreaAutoSizeBooleanComponent;
@@ -159,6 +162,7 @@ describe('autoresize', () => {
         textarea = fixture.debugElement.query(By.directive(NzAutosizeDirective)).nativeElement;
         autosize = fixture.debugElement.query(By.directive(NzAutosizeDirective)).injector.get(NzAutosizeDirective);
       });
+
       it('should resize the textarea based on its ngModel', fakeAsync(() => {
         let previousHeight = textarea.clientHeight;
         testComponent.value = `
@@ -175,11 +179,12 @@ describe('autoresize', () => {
         autosize.resizeToFitContent();
         zone.simulateZoneExit();
         fixture.detectChanges();
-        expect(textarea.clientHeight).toBeGreaterThan(
-          previousHeight,
-          'Expected textarea to have grown with added content.'
-        );
-        expect(textarea.clientHeight).toBe(textarea.scrollHeight, 'Expected textarea height to match its scrollHeight');
+        expect(textarea.clientHeight)
+          .withContext('Expected textarea to have grown with added content.')
+          .toBeGreaterThan(previousHeight);
+        expect(textarea.clientHeight)
+          .withContext('Expected textarea height to match its scrollHeight')
+          .toBe(textarea.scrollHeight);
 
         previousHeight = textarea.clientHeight;
         testComponent.value += `
@@ -195,11 +200,12 @@ describe('autoresize', () => {
         autosize.resizeToFitContent(true);
         zone.simulateZoneExit();
         fixture.detectChanges();
-        expect(textarea.clientHeight).toBeGreaterThan(
-          previousHeight,
-          'Expected textarea to have grown with added content.'
-        );
-        expect(textarea.clientHeight).toBe(textarea.scrollHeight, 'Expected textarea height to match its scrollHeight');
+        expect(textarea.clientHeight)
+          .withContext('Expected textarea to have grown with added content.')
+          .toBeGreaterThan(previousHeight);
+        expect(textarea.clientHeight)
+          .withContext('Expected textarea height to match its scrollHeight')
+          .toBe(textarea.scrollHeight);
       }));
 
       it('should trigger a resize when the window is resized', fakeAsync(() => {
@@ -215,36 +221,16 @@ describe('autoresize', () => {
 });
 
 @Component({
-  template: ` <textarea nz-input nzAutosize [ngModel]="value"></textarea> `,
-  encapsulation: ViewEncapsulation.None,
-  styles: [
-    `
-      textarea.cdk-textarea-autosize-measuring {
-        height: auto !important;
-        overflow: hidden !important;
-        padding: 2px 0 !important;
-        box-sizing: content-box !important;
-      }
-    `
-  ]
+  imports: [FormsModule, NzInputModule],
+  template: `<textarea nz-input nzAutosize [ngModel]="value"></textarea>`
 })
 export class NzTestInputWithTextAreaAutoSizeStringComponent {
   value = '';
 }
 
 @Component({
-  template: ` <textarea nz-input ngModel [nzAutosize]="{ minRows: minRows, maxRows: maxRows }"></textarea> `,
-  encapsulation: ViewEncapsulation.None,
-  styles: [
-    `
-      textarea.cdk-textarea-autosize-measuring {
-        height: auto !important;
-        overflow: hidden !important;
-        padding: 2px 0 !important;
-        box-sizing: content-box !important;
-      }
-    `
-  ]
+  imports: [FormsModule, NzInputModule],
+  template: `<textarea nz-input ngModel [nzAutosize]="{ minRows, maxRows }"></textarea>`
 })
 export class NzTestInputWithTextAreaAutoSizeObjectComponent {
   minRows = 2;
@@ -252,18 +238,8 @@ export class NzTestInputWithTextAreaAutoSizeObjectComponent {
 }
 
 @Component({
-  template: ` <textarea nz-input [nzAutosize]="true" [ngModel]="value"></textarea> `,
-  encapsulation: ViewEncapsulation.None,
-  styles: [
-    `
-      textarea.cdk-textarea-autosize-measuring {
-        height: auto !important;
-        overflow: hidden !important;
-        padding: 2px 0 !important;
-        box-sizing: content-box !important;
-      }
-    `
-  ]
+  imports: [FormsModule, NzInputModule],
+  template: `<textarea nz-input [nzAutosize]="true" [ngModel]="value"></textarea>`
 })
 export class NzTestInputWithTextAreaAutoSizeBooleanComponent {
   value = '';

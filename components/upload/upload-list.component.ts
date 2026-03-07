@@ -3,29 +3,40 @@
  * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
  */
 
-import { animate, style, transition, trigger } from '@angular/animations';
-import { Direction } from '@angular/cdk/bidi';
+import { Directionality } from '@angular/cdk/bidi';
 import { Platform } from '@angular/cdk/platform';
-import { DOCUMENT } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  ElementRef,
-  Inject,
+  computed,
+  DestroyRef,
+  DOCUMENT,
+  inject,
+  input,
   Input,
   NgZone,
   OnChanges,
   ViewEncapsulation
 } from '@angular/core';
-import { Observable } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Observable, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { withAnimationCheck } from 'ng-zorro-antd/core/animation';
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
+import { fromEventOutsideAngular, generateClassName } from 'ng-zorro-antd/core/util';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzProgressModule } from 'ng-zorro-antd/progress';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 
 import { NzIconRenderTemplate, NzShowUploadList, NzUploadFile, NzUploadListType } from './interface';
 
 const isImageFileType = (type: string): boolean => !!type && type.indexOf('image/') === 0;
 
+const CLASS_NAME = 'ant-upload-list';
 const MEASURE_SIZE = 200;
 
 type UploadListIconType = '' | 'uploading' | 'thumbnail';
@@ -41,34 +52,18 @@ interface UploadListFile extends NzUploadFile {
   selector: 'nz-upload-list',
   exportAs: 'nzUploadList',
   templateUrl: './upload-list.component.html',
-  animations: [
-    trigger('itemState', [
-      transition(':enter', [
-        style({ height: '0', width: '0', opacity: 0 }),
-        animate(150, style({ height: '*', width: '*', opacity: 1 }))
-      ]),
-      transition(':leave', [animate(150, style({ height: '0', width: '0', opacity: 0 }))])
-    ])
-  ],
   host: {
-    '[class.ant-upload-list-rtl]': `dir === 'rtl'`,
-    '[class.ant-upload-list-text]': `listType === 'text'`,
-    '[class.ant-upload-list-picture]': `listType === 'picture'`,
-    '[class.ant-upload-list-picture-card]': `listType === 'picture-card'`
+    '[class]': 'class()'
   },
-  preserveWhitespaces: false,
   encapsulation: ViewEncapsulation.None,
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [NzTooltipModule, NgTemplateOutlet, NzIconModule, NzButtonModule, NzProgressModule]
 })
 export class NzUploadListComponent implements OnChanges {
   list: UploadListFile[] = [];
 
-  private get showPic(): boolean {
-    return this.listType === 'picture' || this.listType === 'picture-card';
-  }
-
+  readonly listType = input<NzUploadListType>('text');
   @Input() locale: NzSafeAny = {};
-  @Input() listType!: NzUploadListType;
   @Input()
   set items(list: NzUploadFile[]) {
     this.list = list;
@@ -80,7 +75,31 @@ export class NzUploadListComponent implements OnChanges {
   @Input() previewFile?: (file: NzUploadFile) => Observable<string>;
   @Input() previewIsImage?: (file: NzUploadFile) => boolean;
   @Input() iconRender: NzIconRenderTemplate | null = null;
-  @Input() dir: Direction = 'ltr';
+
+  private readonly document = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly ngZone = inject(NgZone);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly platform = inject(Platform);
+  private readonly dir = inject(Directionality).valueSignal;
+
+  protected readonly class = computed(() => {
+    const cls = [CLASS_NAME, this.generateClass(this.listType())];
+    if (this.dir() === 'rtl') {
+      cls.push(this.generateClass('rtl'));
+    }
+    return cls;
+  });
+  private readonly showPic = computed(() => {
+    return this.listType() === 'picture' || this.listType() === 'picture-card';
+  });
+
+  protected readonly itemAnimationEnter = withAnimationCheck(
+    () => `ant-upload-${this.showPic() ? 'animate-inline' : 'animate'}-enter`
+  );
+  protected readonly itemAnimationLeave = withAnimationCheck(
+    () => `ant-upload-${this.showPic() ? 'animate-inline' : 'animate'}-leave`
+  );
 
   private genErr(file: NzUploadFile): string {
     if (file.response && typeof file.response === 'string') {
@@ -118,7 +137,7 @@ export class NzUploadListComponent implements OnChanges {
   }
 
   private getIconType(file: UploadListFile): UploadListIconType {
-    if (!this.showPic) {
+    if (!this.showPic()) {
       return '';
     }
     if (file.isUploading || (!file.thumbUrl && !file.url)) {
@@ -128,47 +147,49 @@ export class NzUploadListComponent implements OnChanges {
     }
   }
 
-  private previewImage(file: File | Blob): Promise<string> {
-    return new Promise(resolve => {
-      if (!isImageFileType(file.type) || !this.platform.isBrowser) {
-        resolve('');
-        return;
-      }
-      this.ngZone.runOutsideAngular(() => {
-        const canvas = this.doc.createElement('canvas');
-        canvas.width = MEASURE_SIZE;
-        canvas.height = MEASURE_SIZE;
-        canvas.style.cssText = `position: fixed; left: 0; top: 0; width: ${MEASURE_SIZE}px; height: ${MEASURE_SIZE}px; z-index: 9999; display: none;`;
-        this.doc.body.appendChild(canvas);
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        img.onload = () => {
-          const { width, height } = img;
+  private previewImage(file: File | Blob): Observable<string> {
+    if (!isImageFileType(file.type) || !this.platform.isBrowser) {
+      return of('');
+    }
 
-          let drawWidth = MEASURE_SIZE;
-          let drawHeight = MEASURE_SIZE;
-          let offsetX = 0;
-          let offsetY = 0;
+    const canvas = this.document.createElement('canvas');
+    canvas.width = MEASURE_SIZE;
+    canvas.height = MEASURE_SIZE;
+    canvas.style.cssText = `position: fixed; left: 0; top: 0; width: ${MEASURE_SIZE}px; height: ${MEASURE_SIZE}px; z-index: 9999; display: none;`;
+    this.document.body.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.src = objectUrl;
+    return fromEventOutsideAngular(img, 'load').pipe(
+      map(() => {
+        const { width, height } = img;
 
-          if (width < height) {
-            drawHeight = height * (MEASURE_SIZE / width);
-            offsetY = -(drawHeight - drawWidth) / 2;
-          } else {
-            drawWidth = width * (MEASURE_SIZE / height);
-            offsetX = -(drawWidth - drawHeight) / 2;
-          }
+        let drawWidth = MEASURE_SIZE;
+        let drawHeight = MEASURE_SIZE;
+        let offsetX = 0;
+        let offsetY = 0;
 
-          try {
-            ctx!.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
-          } catch {}
-          const dataURL = canvas.toDataURL();
-          this.doc.body.removeChild(canvas);
+        if (width < height) {
+          drawHeight = height * (MEASURE_SIZE / width);
+          offsetY = -(drawHeight - drawWidth) / 2;
+        } else {
+          drawWidth = width * (MEASURE_SIZE / height);
+          offsetX = -(drawWidth - drawHeight) / 2;
+        }
 
-          resolve(dataURL);
-        };
-        img.src = window.URL.createObjectURL(file);
-      });
-    });
+        try {
+          ctx!.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+        } catch {
+          // noop
+        }
+        const dataURL = canvas.toDataURL();
+        this.document.body.removeChild(canvas);
+
+        URL.revokeObjectURL(objectUrl);
+        return dataURL;
+      })
+    );
   }
 
   private genThumb(): void {
@@ -178,7 +199,7 @@ export class NzUploadListComponent implements OnChanges {
 
     const win = window as NzSafeAny;
     if (
-      !this.showPic ||
+      !this.showPic() ||
       typeof document === 'undefined' ||
       typeof win === 'undefined' ||
       !win.FileReader ||
@@ -190,12 +211,20 @@ export class NzUploadListComponent implements OnChanges {
       .filter(file => file.originFileObj instanceof File && file.thumbUrl === undefined)
       .forEach(file => {
         file.thumbUrl = '';
-        (this.previewFile ? this.previewFile(file).toPromise() : this.previewImage(file.originFileObj!)).then(
-          dataUrl => {
-            file.thumbUrl = dataUrl;
-            this.detectChanges();
-          }
+        // Caretaker note: we shouldn't use promises here since they're not cancellable.
+        // A promise microtask can be resolved after the view is destroyed. Thus, running `detectChanges()`
+        // will cause a runtime exception (`detectChanges()` cannot be run on destroyed views).
+        const dataUrl$ = (this.previewFile ? this.previewFile(file) : this.previewImage(file.originFileObj!)).pipe(
+          takeUntilDestroyed(this.destroyRef)
         );
+        this.ngZone.runOutsideAngular(() => {
+          dataUrl$.subscribe(dataUrl => {
+            this.ngZone.run(() => {
+              file.thumbUrl = dataUrl;
+              this.detectChanges();
+            });
+          });
+        });
       });
   }
 
@@ -228,7 +257,6 @@ export class NzUploadListComponent implements OnChanges {
     if (this.onRemove) {
       this.onRemove(file);
     }
-    return;
   }
 
   handleDownload(file: NzUploadFile): void {
@@ -239,19 +267,6 @@ export class NzUploadListComponent implements OnChanges {
     }
   }
 
-  // #endregion
-
-  constructor(
-    private cdr: ChangeDetectorRef,
-    @Inject(DOCUMENT) private doc: NzSafeAny,
-    private ngZone: NgZone,
-    private platform: Platform,
-    private elementRef: ElementRef
-  ) {
-    // TODO: move to host after View Engine deprecation
-    this.elementRef.nativeElement.classList.add('ant-upload-list');
-  }
-
   detectChanges(): void {
     this.fixData();
     this.cdr.detectChanges();
@@ -260,5 +275,9 @@ export class NzUploadListComponent implements OnChanges {
   ngOnChanges(): void {
     this.fixData();
     this.genThumb();
+  }
+
+  private generateClass(suffix: string): string {
+    return generateClassName(CLASS_NAME, suffix);
   }
 }

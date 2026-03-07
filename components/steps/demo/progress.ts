@@ -2,6 +2,9 @@ import { Component } from '@angular/core';
 import { merge, Observable, timer } from 'rxjs';
 import { delay, finalize, map, scan } from 'rxjs/operators';
 
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzStepsModule } from 'ng-zorro-antd/steps';
+
 interface SyncStep {
   id: number;
   title: string;
@@ -30,38 +33,44 @@ function mockAsyncStep(): Observable<number> {
 
 @Component({
   selector: 'nz-demo-steps-progress',
+  imports: [NzButtonModule, NzStepsModule],
   template: `
     <nz-steps [nzCurrent]="current">
-      <nz-step
-        *ngFor="let step of this.steps; trackBy: trackById"
-        [nzTitle]="step.title"
-        [nzDescription]="step.description"
-        [nzPercentage]="step.async ? step.percentage : null"
-      ></nz-step>
+      @for (step of this.steps; track step.id) {
+        <nz-step
+          [nzTitle]="step.title"
+          [nzDescription]="step.description"
+          [nzPercentage]="step.async ? step.percentage : null"
+        />
+      }
     </nz-steps>
     <div class="steps-action">
-      <button nz-button nzType="default" (click)="pre()" *ngIf="current > 0">
-        <span>Previous</span>
-      </button>
-      <button nz-button nzType="default" (click)="next()" [nzLoading]="processing" *ngIf="current < 2">
-        <span>Next</span>
-      </button>
-      <button nz-button nzType="primary" (click)="done()" [nzLoading]="processing" *ngIf="current === 2">
-        <span>Done</span>
-      </button>
+      @if (current > 0) {
+        <button nz-button nzType="default" (click)="pre()">
+          <span>Previous</span>
+        </button>
+      }
+      @if (current < 2) {
+        <button nz-button nzType="default" (click)="next()" [nzLoading]="processing">
+          <span>Next</span>
+        </button>
+      }
+      @if (current === 2) {
+        <button nz-button nzType="primary" (click)="done()" [nzLoading]="processing">
+          <span>Done</span>
+        </button>
+      }
     </div>
   `,
-  styles: [
-    `
-      .steps-action {
-        margin-top: 36px;
-      }
+  styles: `
+    .steps-action {
+      margin-top: 36px;
+    }
 
-      button {
-        margin-right: 8px;
-      }
-    `
-  ]
+    button {
+      margin-right: 8px;
+    }
+  `
 })
 export class NzDemoStepsProgressComponent {
   steps: Step[] = [
@@ -101,10 +110,6 @@ export class NzDemoStepsProgressComponent {
   done(): void {
     this.loadingAndStep();
     console.log('done');
-  }
-
-  trackById(_: number, item: Step): number {
-    return item.id;
   }
 
   loadingAndStep(): void {

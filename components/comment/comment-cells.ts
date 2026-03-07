@@ -8,8 +8,8 @@ import {
   AfterViewInit,
   ChangeDetectionStrategy,
   Component,
-  ComponentFactoryResolver,
   Directive,
+  inject,
   Input,
   OnDestroy,
   OnInit,
@@ -39,15 +39,11 @@ export class NzCommentContentDirective {}
 export class NzCommentActionHostDirective extends CdkPortalOutlet implements OnInit, OnDestroy, AfterViewInit {
   @Input() nzCommentActionHost?: TemplatePortal | null;
 
-  constructor(componentFactoryResolver: ComponentFactoryResolver, viewContainerRef: ViewContainerRef) {
-    super(componentFactoryResolver, viewContainerRef);
-  }
-
-  ngOnInit(): void {
+  override ngOnInit(): void {
     super.ngOnInit();
   }
 
-  ngOnDestroy(): void {
+  override ngOnDestroy(): void {
     super.ngOnDestroy();
   }
 
@@ -59,19 +55,18 @@ export class NzCommentActionHostDirective extends CdkPortalOutlet implements OnI
 @Component({
   selector: 'nz-comment-action',
   exportAs: 'nzCommentAction',
+  template: '<ng-template><ng-content /></ng-template>',
   encapsulation: ViewEncapsulation.None,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: '<ng-template><ng-content></ng-content></ng-template>'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NzCommentActionComponent implements OnInit {
   @ViewChild(TemplateRef, { static: true }) implicitContent!: TemplateRef<void>;
+  private viewContainerRef = inject(ViewContainerRef);
   private contentPortal: TemplatePortal | null = null;
 
   get content(): TemplatePortal | null {
     return this.contentPortal;
   }
-
-  constructor(private viewContainerRef: ViewContainerRef) {}
 
   ngOnInit(): void {
     this.contentPortal = new TemplatePortal(this.implicitContent, this.viewContainerRef);

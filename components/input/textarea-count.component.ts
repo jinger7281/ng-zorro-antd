@@ -8,14 +8,17 @@ import {
   ChangeDetectionStrategy,
   Component,
   ContentChild,
+  DestroyRef,
   ElementRef,
+  inject,
   Input,
   isDevMode,
-  OnDestroy,
+  numberAttribute,
   Renderer2
 } from '@angular/core';
-import { EMPTY, merge, Subject } from 'rxjs';
-import { map, startWith, takeUntil } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { EMPTY } from 'rxjs';
+import { map, startWith } from 'rxjs/operators';
 
 import { isNotNil } from 'ng-zorro-antd/core/util';
 
@@ -23,22 +26,21 @@ import { NzInputDirective } from './input.directive';
 
 @Component({
   selector: 'nz-textarea-count',
-  template: ` <ng-content select="textarea[nz-input]"></ng-content> `,
+  template: `<ng-content select="textarea[nz-input]" />`,
   host: {
     class: 'ant-input-textarea-show-count'
   },
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class NzTextareaCountComponent implements AfterContentInit, OnDestroy {
+export class NzTextareaCountComponent implements AfterContentInit {
+  private renderer = inject(Renderer2);
+  private destroyRef = inject(DestroyRef);
+  private elementRef: ElementRef<HTMLElement> = inject(ElementRef);
+
   @ContentChild(NzInputDirective, { static: true }) nzInputDirective!: NzInputDirective;
-  @Input() nzMaxCharacterCount: number = 0;
+  @Input({ transform: numberAttribute }) nzMaxCharacterCount: number = 0;
   @Input() nzComputeCharacterCount: (v: string) => number = v => v.length;
   @Input() nzFormatter: (cur: number, max: number) => string = (c, m) => `${c}${m > 0 ? `/${m}` : ``}`;
-
-  private configChange$ = new Subject();
-  private destroy$ = new Subject();
-
-  constructor(private renderer: Renderer2, private elementRef: ElementRef<HTMLElement>) {}
 
   ngAfterContentInit(): void {
     if (!this.nzInputDirective && isDevMode()) {
@@ -47,10 +49,10 @@ export class NzTextareaCountComponent implements AfterContentInit, OnDestroy {
 
     if (this.nzInputDirective.ngControl) {
       const valueChanges = this.nzInputDirective.ngControl.valueChanges || EMPTY;
-      merge(valueChanges, this.configChange$)
+      valueChanges
         .pipe(
-          takeUntil(this.destroy$),
-          map(() => this.nzInputDirective.ngControl.value),
+          takeUntilDestroyed(this.destroyRef),
+          map(() => this.nzInputDirective.ngControl!.value),
           startWith(this.nzInputDirective.ngControl.value as string)
         )
         .subscribe(value => {
@@ -64,11 +66,5 @@ export class NzTextareaCountComponent implements AfterContentInit, OnDestroy {
     const currentCount = this.nzComputeCharacterCount(inputValue);
     const dataCount = this.nzFormatter(currentCount, this.nzMaxCharacterCount);
     this.renderer.setAttribute(this.elementRef.nativeElement, 'data-count', dataCount);
-  }
-
-  ngOnDestroy(): void {
-    this.configChange$.complete();
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 }

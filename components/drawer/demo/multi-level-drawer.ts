@@ -1,7 +1,15 @@
 import { Component } from '@angular/core';
 
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzDrawerModule } from 'ng-zorro-antd/drawer';
+import { NzFormModule } from 'ng-zorro-antd/form';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzListModule } from 'ng-zorro-antd/list';
+import { NzTagModule } from 'ng-zorro-antd/tag';
+
 @Component({
   selector: 'nz-demo-drawer-multi-level-drawer',
+  imports: [NzButtonModule, NzDrawerModule, NzFormModule, NzInputModule, NzListModule, NzTagModule],
   template: `
     <button nz-button nzType="primary" (click)="open()">New Cookbook</button>
     <nz-drawer
@@ -39,7 +47,7 @@ import { Component } from '@angular/core';
       <nz-drawer [nzClosable]="false" [nzVisible]="childrenVisible" nzTitle="Food" (nzOnClose)="closeChildren()">
         <nz-list *nzDrawerContent [nzDataSource]="vegetables" [nzRenderItem]="item">
           <ng-template #item let-item>
-            <nz-list-item [nzContent]="item"></nz-list-item>
+            <nz-list-item [nzContent]="item" />
           </ng-template>
         </nz-list>
       </nz-drawer>

@@ -1,29 +1,33 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+
+import { NzSelectModule } from 'ng-zorro-antd/select';
+
+function alphabet(): string[] {
+  const children: string[] = [];
+  for (let i = 10; i < 36; i++) {
+    children.push(i.toString(36) + i);
+  }
+  return children;
+}
 
 @Component({
   selector: 'nz-demo-select-tags',
+  imports: [FormsModule, NzSelectModule],
   template: `
     <nz-select nzMode="tags" nzPlaceHolder="Tag Mode" [(ngModel)]="listOfTagOptions">
-      <nz-option *ngFor="let option of listOfOption" [nzLabel]="option.label" [nzValue]="option.value"></nz-option>
+      @for (option of listOfOption; track option) {
+        <nz-option [nzLabel]="option" [nzValue]="option" />
+      }
     </nz-select>
   `,
-  styles: [
-    `
-      nz-select {
-        width: 100%;
-      }
-    `
-  ]
-})
-export class NzDemoSelectTagsComponent implements OnInit {
-  listOfOption: Array<{ label: string; value: string }> = [];
-  listOfTagOptions = [];
-
-  ngOnInit(): void {
-    const children: Array<{ label: string; value: string }> = [];
-    for (let i = 10; i < 36; i++) {
-      children.push({ label: i.toString(36) + i, value: i.toString(36) + i });
+  styles: `
+    nz-select {
+      width: 100%;
     }
-    this.listOfOption = children;
-  }
+  `
+})
+export class NzDemoSelectTagsComponent {
+  readonly listOfOption: string[] = alphabet();
+  listOfTagOptions: string[] = [];
 }

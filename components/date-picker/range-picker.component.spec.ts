@@ -1,12 +1,17 @@
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
+
 import { ESCAPE } from '@angular/cdk/keycodes';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { registerLocaleData } from '@angular/common';
 import zh from '@angular/common/locales/zh';
-import { Component, DebugElement, TemplateRef, ViewChild } from '@angular/core';
+import { Component, DebugElement, provideZoneChangeDetection, TemplateRef, ViewChild } from '@angular/core';
 import { ComponentFixture, fakeAsync, flush, inject, TestBed, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 
 import differenceInDays from 'date-fns/differenceInDays';
 import isSameDay from 'date-fns/isSameDay';
@@ -18,8 +23,10 @@ import {
   typeInElement
 } from 'ng-zorro-antd/core/testing';
 import { CandyDate } from 'ng-zorro-antd/core/time';
-import { NgStyleInterface } from 'ng-zorro-antd/core/types';
-import { RangePartType } from 'ng-zorro-antd/date-picker/standard-types';
+import { NgStyleInterface, NzStatus } from 'ng-zorro-antd/core/types';
+import { NzDatePickerSizeType } from 'ng-zorro-antd/date-picker/date-picker.component';
+import { NzRangePickerComponent } from 'ng-zorro-antd/date-picker/range-picker.component';
+import { CompatibleDate, NzPanelChangeType, RangePartType } from 'ng-zorro-antd/date-picker/standard-types';
 import {
   ENTER_EVENT,
   getPickerAbstract,
@@ -32,22 +39,19 @@ import { NzDatePickerModule } from './date-picker.module';
 
 registerLocaleData(zh);
 
-describe('NzRangePickerComponent', () => {
+describe('range-picker', () => {
   let fixture: ComponentFixture<NzTestRangePickerComponent>;
   let fixtureInstance: NzTestRangePickerComponent;
   let debugElement: DebugElement;
   let overlayContainer: OverlayContainer;
   let overlayContainerElement: HTMLElement;
 
-  beforeEach(fakeAsync(() => {
+  beforeEach(() => {
+    // todo: use zoneless
     TestBed.configureTestingModule({
-      imports: [FormsModule, NoopAnimationsModule, NzDatePickerModule],
-      providers: [],
-      declarations: [NzTestRangePickerComponent]
+      providers: [provideNoopAnimations(), provideZoneChangeDetection()]
     });
-
-    TestBed.compileComponents();
-  }));
+  });
 
   beforeEach(() => {
     fixture = TestBed.createComponent(NzTestRangePickerComponent);
@@ -77,6 +81,17 @@ describe('NzRangePickerComponent', () => {
       tick(500);
       fixture.detectChanges();
       expect(getPickerContainer()).toBeNull();
+    }));
+
+    it('should nz-range-picker work', fakeAsync(() => {
+      fixtureInstance.useSuite = 5;
+      fixture.whenRenderingDone().then(() => {
+        tick(500);
+        fixture.detectChanges();
+        expect(getPickerContainer()).not.toBeNull();
+        const pickerInput = getPickerInput(fixture.debugElement);
+        expect(pickerInput).not.toBeNull();
+      });
     }));
 
     it('should open by click and close by tab', fakeAsync(() => {
@@ -128,6 +143,17 @@ describe('NzRangePickerComponent', () => {
       expect(getPickerContainer()).not.toBeNull();
     }));
 
+    it('should execute default on the mousedown event when mouse down in date picker input', fakeAsync(() => {
+      fixture.detectChanges();
+      openPickerByClickTrigger();
+
+      const event = new MouseEvent('mousedown');
+      spyOn(event, 'preventDefault').and.callThrough();
+      fixture.nativeElement.querySelector(`.${PREFIX_CLASS}-separator`).dispatchEvent(event);
+
+      expect(event.preventDefault).not.toHaveBeenCalled();
+    }));
+
     it('should support nzAllowClear and work properly', fakeAsync(() => {
       const clearBtnSelector = By.css(`.${PREFIX_CLASS}-clear`);
       const initial = (fixtureInstance.modelValue = [new Date(), new Date()]);
@@ -147,6 +173,19 @@ describe('NzRangePickerComponent', () => {
       expect(fixtureInstance.modelValue.length).toBe(0);
       expect(nzOnChange).toHaveBeenCalledWith([]);
       expect(debugElement.query(clearBtnSelector)).toBeFalsy();
+    }));
+
+    it('should support clear input value when set default value', fakeAsync(() => {
+      const clearBtnSelector = By.css(`.${PREFIX_CLASS}-clear`);
+      fixtureInstance.modelValue = [new Date(), new Date()];
+      fixtureInstance.nzAllowClear = true;
+      tick();
+      fixture.autoDetectChanges();
+
+      const leftInput = getPickerInput(fixture.debugElement);
+      tick(500);
+      debugElement.query(clearBtnSelector).nativeElement.click();
+      expect(leftInput.attributes.getNamedItem('ng-reflect-model')?.value).toBeUndefined();
     }));
 
     it('should support nzAutoFocus', fakeAsync(() => {
@@ -196,7 +235,7 @@ describe('NzRangePickerComponent', () => {
     it('should support nzDisabledDate', fakeAsync(() => {
       fixture.detectChanges();
       const compareDate = new Date('2018-11-15 00:00:00');
-      fixtureInstance.modelValue = [new Date('2018-11-11 12:12:12'), null];
+      fixtureInstance.modelValue = [new Date('2018-11-11 12:12:12'), null!];
       fixtureInstance.nzDisabledDate = (current: Date) => isSameDay(current, compareDate);
       fixture.detectChanges();
       flush();
@@ -276,11 +315,19 @@ describe('NzRangePickerComponent', () => {
       expect(queryFromRightPanel('.ant-picker-header-month-btn').textContent!.indexOf('2') > -1).toBeTruthy();
     }));
 
-    it('should support nzSeparator', fakeAsync(() => {
+    it('should support string nzSeparator', fakeAsync(() => {
       fixtureInstance.nzSeparator = '→';
       fixture.detectChanges();
       expect(fixture.debugElement.query(By.css(`.ant-picker-range-separator`)).nativeElement.textContent.trim()).toBe(
         '→'
+      );
+    }));
+
+    it('should support ElementRef nzSeparator', fakeAsync(() => {
+      fixtureInstance.useSuite = 6;
+      fixture.detectChanges();
+      expect(fixture.debugElement.query(By.css(`.ant-picker-range-separator`)).nativeElement.textContent.trim()).toBe(
+        'TEST_SEPARATOR_REF'
       );
     }));
 
@@ -348,6 +395,29 @@ describe('NzRangePickerComponent', () => {
       const result = (nzOnChange.calls.allArgs()[0] as Date[][])[0];
       expect((result[0] as Date).getDate()).toBe(+leftText);
     }));
+    it('should not call nzOnChange if values do not change', fakeAsync(() => {
+      fixtureInstance.modelValue = [new Date('2018-11-11'), new Date('2018-11-11')];
+      const nzOnChange = spyOn(fixtureInstance, 'modelValueChange');
+      fixture.detectChanges();
+      flush();
+      fixture.detectChanges();
+      openPickerByClickTrigger();
+      const leftInput = getPickerInput(fixture.debugElement);
+      const rightInput = getRangePickerRightInput(fixture.debugElement);
+      typeInElement('2018-11-11 00:00:00', leftInput);
+      fixture.detectChanges();
+      flush();
+      fixture.detectChanges();
+      typeInElement('2018-11-11 00:00:00', rightInput);
+      fixture.detectChanges();
+      flush();
+      fixture.detectChanges();
+      triggerInputBlur();
+      fixture.detectChanges();
+      flush();
+      fixture.detectChanges();
+      expect(nzOnChange).not.toHaveBeenCalled();
+    }));
 
     it('should support nzInline', fakeAsync(() => {
       const nzOnChange = spyOn(fixtureInstance, 'modelValueChange');
@@ -373,6 +443,30 @@ describe('NzRangePickerComponent', () => {
       fixture.detectChanges();
       const result = (nzOnChange.calls.allArgs()[0] as Date[][])[0];
       expect((result[0] as Date).getDate()).toBe(+leftText);
+    }));
+
+    it('should support correct position for top arrow', fakeAsync(() => {
+      fixture.detectChanges();
+      openPickerByClickTrigger();
+      fixture.detectChanges();
+      flush();
+      fixture.detectChanges();
+      const arrow = queryFromOverlay(`.${PREFIX_CLASS}-range-arrow`) as HTMLElement;
+
+      expect(arrow.style.left).not.toBe('');
+    }));
+
+    it('should support dir rtl for top arrow', fakeAsync(() => {
+      fixture.debugElement.nativeElement.parentElement.setAttribute('dir', 'rtl');
+      fixture.detectChanges();
+      openPickerByClickTrigger();
+      fixture.detectChanges();
+      flush();
+      fixture.detectChanges();
+      const arrow = queryFromOverlay(`.${PREFIX_CLASS}-range-arrow`) as HTMLElement;
+
+      expect(arrow.style.right).not.toBe('');
+      fixture.debugElement.nativeElement.parentElement.setAttribute('dir', '');
     }));
   }); // /general api testing
 
@@ -462,7 +556,7 @@ describe('NzRangePickerComponent', () => {
         ).textContent!.trim()
       ).toBe('11');
 
-      // Click to choose a hour
+      // Click to choose an hour
       dispatchMouseEvent(
         queryFromOverlay('.ant-picker-time-panel-column .ant-picker-time-panel-cell:first-child'),
         'click'
@@ -523,7 +617,7 @@ describe('NzRangePickerComponent', () => {
       const okButton = queryFromOverlay('.ant-picker-ok > button');
       expect(okButton.getAttribute('disabled')).not.toBeNull();
 
-      // Click to choose a hour
+      // Click to choose an hour
       dispatchMouseEvent(
         queryFromRightPanel('.ant-picker-time-panel-column .ant-picker-time-panel-cell:first-child'),
         'click'
@@ -647,50 +741,6 @@ describe('NzRangePickerComponent', () => {
       ).toBe(2);
     }));
 
-    it('should focus to invalid input when sorted', fakeAsync(() => {
-      const nzOnChange = spyOn(fixtureInstance, 'modelValueChange');
-      fixtureInstance.modelValue = [new Date('2018-11-11 01:00:00'), new Date('2018-12-12 00:00:00')];
-      fixtureInstance.nzShowTime = true;
-      fixtureInstance.nzDisabledTime = (_current: Date, partial: 'start' | 'end') =>
-        partial === 'start'
-          ? {
-              nzDisabledHours: () => [0]
-            }
-          : {
-              nzDisabledHours: () => [1]
-            };
-      fixture.detectChanges();
-      openPickerByClickTrigger();
-
-      const leftInput = getPickerInput(fixture.debugElement);
-      const rightInput = getRangePickerRightInput(fixture.debugElement);
-      const okButton = queryFromOverlay('.ant-picker-ok > button');
-      // will sort value
-      typeInElement('2019-11-11 01:00:00', leftInput);
-      fixture.detectChanges();
-      tick(500);
-      fixture.detectChanges();
-      expect(leftInput.value.trim()).toBe('2019-11-11 01:00:00');
-      expect(okButton.getAttribute('disabled')).toEqual(null);
-
-      const newValidDateString = ['2020-12-12 01:00:00', '2021-11-11 00:00:00'];
-      typeInElement(newValidDateString[0], leftInput);
-      fixture.detectChanges();
-      dispatchMouseEvent(okButton, 'click');
-      fixture.detectChanges();
-      tick(500);
-      fixture.detectChanges();
-      expect(rightInput === document.activeElement).toBe(true);
-
-      typeInElement(newValidDateString[1], rightInput);
-      fixture.detectChanges();
-      dispatchMouseEvent(okButton, 'click');
-      fixture.detectChanges();
-      tick(500);
-      fixture.detectChanges();
-      expect(nzOnChange).toHaveBeenCalledWith([new Date(newValidDateString[0]), new Date(newValidDateString[1])]);
-    }));
-
     it('should support nzRenderExtraFooter', fakeAsync(() => {
       fixtureInstance.nzRenderExtraFooter = () => fixtureInstance.tplExtraFooter;
       fixture.detectChanges();
@@ -704,7 +754,8 @@ describe('NzRangePickerComponent', () => {
     }));
 
     it('should support nzOnPanelChange', fakeAsync(() => {
-      spyOn(fixtureInstance, 'nzOnPanelChange');
+      fixtureInstance.modelValue = [new Date('2018-10-11 11:22:34'), new Date('2018-11-12 11:22:33')];
+      const spy = spyOn(fixtureInstance, 'nzOnPanelChange');
       fixture.detectChanges();
       openPickerByClickTrigger();
 
@@ -715,13 +766,73 @@ describe('NzRangePickerComponent', () => {
         'click'
       );
       fixture.detectChanges();
+
+      expect(fixtureInstance.nzOnPanelChange).toHaveBeenCalledWith({
+        mode: ['month', 'date'],
+        date: [new Date('2018-10-11 11:22:34'), new Date('2018-11-11 11:22:34')]
+      });
+
+      spy.calls.reset();
+
       // Right
       dispatchMouseEvent(
         overlayContainerElement.querySelector('.ant-picker-panel:last-child .ant-picker-header-year-btn')!,
         'click'
       );
       fixture.detectChanges();
-      expect(fixtureInstance.nzOnPanelChange).toHaveBeenCalledWith(['month', 'year']);
+      expect(fixtureInstance.nzOnPanelChange).toHaveBeenCalledWith({
+        mode: ['month', 'year'],
+        date: [new Date('2018-10-11 11:22:34'), new Date('2018-11-11 11:22:34')]
+      });
+    }));
+
+    it('should support nzOnPanelChange when click on prev button', fakeAsync(() => {
+      fixtureInstance.modelValue = [new Date('2018-10-11 11:22:34'), new Date('2018-11-12 11:22:33')];
+      spyOn(fixtureInstance, 'nzOnPanelChange');
+      fixture.detectChanges();
+      openPickerByClickTrigger();
+      dispatchMouseEvent(getPreBtn('left'), 'click');
+      fixture.detectChanges();
+      expect(fixtureInstance.nzOnPanelChange).toHaveBeenCalledWith({
+        mode: ['date', 'date'],
+        date: [new Date('2018-09-11 11:22:34'), new Date('2018-10-11 11:22:34')]
+      });
+    }));
+    it('should support nzOnPanelChange when click on next button', fakeAsync(() => {
+      fixtureInstance.modelValue = [new Date('2018-10-11 11:22:34'), new Date('2018-11-12 11:22:33')];
+      spyOn(fixtureInstance, 'nzOnPanelChange');
+      fixture.detectChanges();
+      openPickerByClickTrigger();
+      dispatchMouseEvent(getNextBtn('right'), 'click');
+      fixture.detectChanges();
+      expect(fixtureInstance.nzOnPanelChange).toHaveBeenCalledWith({
+        mode: ['date', 'date'],
+        date: [new Date('2018-11-11 11:22:34'), new Date('2018-12-11 11:22:34')]
+      });
+    }));
+    it('should support nzOnPanelChange when click on super prev button', fakeAsync(() => {
+      fixtureInstance.modelValue = [new Date('2018-10-11 11:22:34'), new Date('2018-11-12 11:22:33')];
+      spyOn(fixtureInstance, 'nzOnPanelChange');
+      fixture.detectChanges();
+      openPickerByClickTrigger();
+      dispatchMouseEvent(getSuperPreBtn('left'), 'click');
+      fixture.detectChanges();
+      expect(fixtureInstance.nzOnPanelChange).toHaveBeenCalledWith({
+        mode: ['date', 'date'],
+        date: [new Date('2017-10-11 11:22:34'), new Date('2017-11-11 11:22:34')]
+      });
+    }));
+    it('should support nzOnPanelChange when click on super next button', fakeAsync(() => {
+      fixtureInstance.modelValue = [new Date('2018-10-11 11:22:34'), new Date('2018-11-12 11:22:33')];
+      spyOn(fixtureInstance, 'nzOnPanelChange');
+      fixture.detectChanges();
+      openPickerByClickTrigger();
+      dispatchMouseEvent(getSuperNextBtn('left'), 'click');
+      fixture.detectChanges();
+      expect(fixtureInstance.nzOnPanelChange).toHaveBeenCalledWith({
+        mode: ['date', 'date'],
+        date: [new Date('2019-10-11 11:22:34'), new Date('2019-11-11 11:22:34')]
+      });
     }));
 
     it('should support nzOnOk', fakeAsync(() => {
@@ -769,9 +880,7 @@ describe('NzRangePickerComponent', () => {
       openPickerByClickTrigger();
       expect(queryFromOverlay('.ant-picker-ranges .ant-picker-preset')).toBeDefined();
 
-      let selector: HTMLElement;
-
-      selector = queryFromOverlay('.ant-picker-ranges li.ant-picker-preset:first-child');
+      const selector = queryFromOverlay('.ant-picker-ranges li.ant-picker-preset:first-child');
       dispatchMouseEvent(selector, 'mouseenter');
       fixture.detectChanges();
       expect(
@@ -831,7 +940,33 @@ describe('NzRangePickerComponent', () => {
       const newDateString = ['2019-09-15 11:08:22', '2020-10-10 11:08:22'];
       typeInElement(newDateString[0], leftInput);
       fixture.detectChanges();
+      // should focus the other input
+      leftInput.dispatchEvent(ENTER_EVENT);
+      fixture.detectChanges();
       typeInElement(newDateString[1], rightInput);
+      fixture.detectChanges();
+      rightInput.dispatchEvent(ENTER_EVENT);
+      fixture.detectChanges();
+      tick(500);
+      expect(nzOnChange).toHaveBeenCalledWith([new Date(newDateString[0]), new Date(newDateString[1])]);
+    }));
+
+    it('if sort order is wrong, output in reverse order', fakeAsync(() => {
+      const nzOnChange = spyOn(fixtureInstance, 'modelValueChange');
+      fixtureInstance.modelValue = [];
+      fixture.detectChanges();
+      openPickerByClickTrigger();
+
+      const leftInput = getPickerInput(fixture.debugElement);
+      const rightInput = getRangePickerRightInput(fixture.debugElement);
+      const newDateString = ['2019-09-15', '2020-10-10'];
+
+      typeInElement(newDateString[1], leftInput);
+      fixture.detectChanges();
+      leftInput.dispatchEvent(ENTER_EVENT);
+      fixture.detectChanges();
+
+      typeInElement(newDateString[0], rightInput);
       fixture.detectChanges();
       rightInput.dispatchEvent(ENTER_EVENT);
       fixture.detectChanges();
@@ -870,14 +1005,17 @@ describe('NzRangePickerComponent', () => {
       const rightInput = getRangePickerRightInput(fixture.debugElement);
       typeInElement('2019-08-10', leftInput);
       fixture.detectChanges();
+      // should focus the other input
+      leftInput.dispatchEvent(ENTER_EVENT);
+      fixture.detectChanges();
       typeInElement('2018-02-06', rightInput);
       fixture.detectChanges();
       getRangePickerRightInput(fixture.debugElement).dispatchEvent(ENTER_EVENT);
       fixture.detectChanges();
       flush();
       fixture.detectChanges();
-      expect(leftInput.value).toBe('');
-      expect(rightInput.value).toBe('2018-02-06');
+      expect(leftInput.value).toBe('2018-02-06');
+      expect(rightInput.value).toBe('2019-08-10');
     }));
 
     it('should panel date follows the selected date', fakeAsync(() => {
@@ -898,10 +1036,10 @@ describe('NzRangePickerComponent', () => {
     }));
   }); // /specified date picker testing
 
-  describe('ngModel value accesors', () => {
+  describe('ngModel value accessors', () => {
     beforeEach(() => (fixtureInstance.useSuite = 3));
 
-    it('should specified date provide by "modelValue" be choosed', fakeAsync(() => {
+    it('should specified date provide by "modelValue" be chosen', fakeAsync(() => {
       fixtureInstance.modelValue = [new Date('2018-11-11'), new Date('2018-12-12')];
       fixture.detectChanges();
       tick(); // Wait writeValue() tobe done
@@ -981,6 +1119,30 @@ describe('NzRangePickerComponent', () => {
       dispatchMouseEvent(rightThirdRowCell, 'mouseenter');
       fixture.detectChanges();
       expect(rightThirdRowCell.classList.contains('ant-picker-cell-range-hover-end')).toBeTruthy();
+    }));
+  });
+
+  describe('status', () => {
+    let fixtureStatus: ComponentFixture<NzTestRangePickerStatusComponent>;
+    let fixtureStatusInstance: NzTestRangePickerStatusComponent;
+    let rangePickerElement!: HTMLElement;
+    beforeEach(() => {
+      fixtureStatus = TestBed.createComponent(NzTestRangePickerStatusComponent);
+      fixtureStatusInstance = fixtureStatus.componentInstance;
+      rangePickerElement = fixtureStatus.debugElement.query(By.directive(NzRangePickerComponent)).nativeElement;
+      fixtureStatus.detectChanges();
+    });
+
+    it('should classname correct', fakeAsync(() => {
+      expect(rangePickerElement.classList).toContain('ant-picker-status-error');
+
+      fixtureStatusInstance.status = 'warning';
+      fixtureStatus.detectChanges();
+      expect(rangePickerElement.classList).toContain('ant-picker-status-warning');
+
+      fixtureStatusInstance.status = '';
+      fixtureStatus.detectChanges();
+      expect(rangePickerElement.classList).not.toContain('ant-picker-status-warning');
     }));
   });
 
@@ -1075,60 +1237,66 @@ describe('NzRangePickerComponent', () => {
 });
 
 @Component({
+  imports: [FormsModule, NzDatePickerModule],
   template: `
-    <ng-container [ngSwitch]="useSuite">
-      <!-- Suite 1 -->
-      <nz-range-picker
-        *ngSwitchCase="1"
-        [nzAllowClear]="nzAllowClear"
-        [nzAutoFocus]="nzAutoFocus"
-        [nzDisabled]="nzDisabled"
-        [nzDisabledDate]="nzDisabledDate"
-        [nzLocale]="nzLocale"
-        [nzPlaceHolder]="nzPlaceHolder"
-        [nzPopupStyle]="nzPopupStyle"
-        [nzDropdownClassName]="nzDropdownClassName"
-        [nzSize]="nzSize"
-        [nzSeparator]="nzSeparator"
-        (nzOnOpenChange)="nzOnOpenChange($event)"
-        [(ngModel)]="modelValue"
-        (ngModelChange)="modelValueChange($event)"
-        [nzDateRender]="nzDateRender"
-        [nzDisabledTime]="nzDisabledTime"
-        [nzRenderExtraFooter]="nzRenderExtraFooter"
-        [nzShowToday]="nzShowToday"
-        [nzShowNow]="nzShowNow"
-        [nzMode]="nzMode"
-        [nzRanges]="nzRanges"
-        [nzDefaultPickerValue]="nzDefaultPickerValue"
-        [nzInline]="nzInline"
-        (nzOnPanelChange)="nzOnPanelChange($event)"
-        (nzOnCalendarChange)="nzOnCalendarChange($event)"
-        [nzShowTime]="nzShowTime"
-        (nzOnOk)="nzOnOk($event)"
-      ></nz-range-picker>
-      <ng-template #tplDateRender let-current>
-        <div [class.test-first-day]="current.getDate() === 1">{{ current.getDate() }}</div>
-      </ng-template>
-      <ng-template #tplExtraFooter>TEST_EXTRA_FOOTER</ng-template>
+    <ng-template #tplDateRender let-current>
+      <div [class.test-first-day]="current.getDate() === 1">{{ current.getDate() }}</div>
+    </ng-template>
+    <ng-template #tplExtraFooter>TEST_EXTRA_FOOTER</ng-template>
+    <ng-template #separatorTemplate>TEST_SEPARATOR_REF</ng-template>
 
-      <!-- Suite 2 -->
-      <!-- use another picker to avoid nzOpen's side-effects because nzOpen act as "true" if used -->
-      <nz-range-picker *ngSwitchCase="2" [nzOpen]="nzOpen"></nz-range-picker>
-
-      <!-- Suite 3 -->
-      <nz-range-picker *ngSwitchCase="3" nzOpen [(ngModel)]="modelValue"></nz-range-picker>
-
-      <!-- Suite 4 -->
-      <ng-container *ngSwitchCase="4">
-        <nz-range-picker [(ngModel)]="modelValue"></nz-range-picker>
-        <nz-date-picker [ngModel]="singleValue"></nz-date-picker>
-      </ng-container>
-    </ng-container>
+    @switch (useSuite) {
+      @case (1) {
+        <nz-range-picker
+          [nzAllowClear]="nzAllowClear"
+          [nzAutoFocus]="nzAutoFocus"
+          [nzDisabled]="nzDisabled"
+          [nzDisabledDate]="nzDisabledDate"
+          [nzLocale]="nzLocale"
+          [nzPlaceHolder]="nzPlaceHolder"
+          [nzPopupStyle]="nzPopupStyle"
+          [nzDropdownClassName]="nzDropdownClassName"
+          [nzSize]="nzSize"
+          [nzSeparator]="nzSeparator"
+          (nzOnOpenChange)="nzOnOpenChange($event)"
+          [(ngModel)]="modelValue"
+          (ngModelChange)="modelValueChange($event)"
+          [nzDateRender]="nzDateRender"
+          [nzDisabledTime]="nzDisabledTime"
+          [nzRenderExtraFooter]="nzRenderExtraFooter"
+          [nzShowToday]="nzShowToday"
+          [nzShowNow]="nzShowNow"
+          [nzMode]="nzMode"
+          [nzRanges]="nzRanges"
+          [nzDefaultPickerValue]="nzDefaultPickerValue"
+          [nzInline]="nzInline"
+          (nzOnPanelChange)="nzOnPanelChange($event)"
+          (nzOnCalendarChange)="nzOnCalendarChange($event)"
+          [nzShowTime]="nzShowTime"
+          (nzOnOk)="nzOnOk($event)"
+        />
+      }
+      @case (2) {
+        <nz-range-picker [nzOpen]="nzOpen" />
+      }
+      @case (3) {
+        <nz-range-picker nzOpen [(ngModel)]="modelValue" />
+      }
+      @case (4) {
+        <nz-range-picker [(ngModel)]="modelValue" />
+        <nz-date-picker [ngModel]="singleValue" />
+      }
+      @case (5) {
+        <nz-range-picker nzOpen />
+      }
+      @case (6) {
+        <nz-range-picker [nzSeparator]="separatorTemplate" />
+      }
+    }
   `
 })
 class NzTestRangePickerComponent {
-  useSuite!: 1 | 2 | 3 | 4;
+  useSuite!: 1 | 2 | 3 | 4 | 5 | 6;
   @ViewChild('tplDateRender', { static: true }) tplDateRender!: TemplateRef<Date>;
   @ViewChild('tplExtraFooter', { static: true }) tplExtraFooter!: TemplateRef<void>;
 
@@ -1141,11 +1309,15 @@ class NzTestRangePickerComponent {
   nzPlaceHolder!: string[];
   nzPopupStyle!: NgStyleInterface;
   nzDropdownClassName!: string;
-  nzSize!: string;
+  nzSize!: NzDatePickerSizeType;
+
   nzOnOpenChange(_: boolean): void {}
-  modelValue: Array<Date | null> = [];
+
+  modelValue: CompatibleDate = [];
+
   modelValueChange(_: Date[]): void {}
-  nzDefaultPickerValue!: Array<Date | null>;
+
+  nzDefaultPickerValue!: CompatibleDate;
   nzSeparator!: string;
   nzInline: boolean = false;
 
@@ -1158,13 +1330,23 @@ class NzTestRangePickerComponent {
   nzMode = 'date';
 
   nzRanges: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-  nzOnPanelChange(_: string[]): void {}
-  nzOnCalendarChange(): void {}
-  nzOnOk(_: Array<null | Date>): void {}
+  nzOnPanelChange(_: NzPanelChangeType): void {}
+
+  nzOnCalendarChange(_: Array<Date | null>): void {}
+
+  nzOnOk(_: CompatibleDate | null): void {}
 
   // --- Suite 2
   nzOpen: boolean = false;
 
   // --- Suite 4
   singleValue!: Date;
+}
+
+@Component({
+  imports: [NzDatePickerModule],
+  template: `<nz-range-picker [nzStatus]="status" />`
+})
+class NzTestRangePickerStatusComponent {
+  status: NzStatus = 'error';
 }

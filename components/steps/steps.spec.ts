@@ -1,44 +1,41 @@
-import { BidiModule, Dir } from '@angular/cdk/bidi';
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
+
+import { BidiModule, Dir, Direction } from '@angular/cdk/bidi';
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   DebugElement,
   OnInit,
+  provideZoneChangeDetection,
   TemplateRef,
   ViewChild
 } from '@angular/core';
-import { ComponentFixture, fakeAsync, TestBed, tick, waitForAsync } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 
-import { NzDividerModule } from 'ng-zorro-antd/divider';
-import { NzIconTestModule } from 'ng-zorro-antd/icon/testing';
+import { BooleanInput, NzDirectionVHType, NzSizeDSType } from 'ng-zorro-antd/core/types';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { provideNzIconsTesting } from 'ng-zorro-antd/icon/testing';
 
 import { NzDemoStepsClickableComponent } from './demo/clickable';
 import { NzDemoStepsNavComponent } from './demo/nav';
 import { NzStepComponent } from './step.component';
-import { NzStepsComponent } from './steps.component';
+import { NzProgressDotTemplate, NzStatusType, NzStepsComponent } from './steps.component';
 import { NzStepsModule } from './steps.module';
 
 describe('steps', () => {
-  beforeEach(
-    waitForAsync(() => {
-      TestBed.configureTestingModule({
-        imports: [BidiModule, NzStepsModule, NzIconTestModule, NzDividerModule],
-        declarations: [
-          NzTestOuterStepsComponent,
-          NzDemoStepsClickableComponent,
-          NzTestInnerStepStringComponent,
-          NzTestInnerStepTemplateComponent,
-          NzTestStepForComponent,
-          NzTestStepAsyncComponent,
-          NzDemoStepsNavComponent,
-          NzTestOuterStepsRtlComponent
-        ]
-      });
-      TestBed.compileComponents();
-    })
-  );
+  beforeEach(() => {
+    // todo: use zoneless
+    TestBed.configureTestingModule({
+      providers: [provideNzIconsTesting(), provideZoneChangeDetection()]
+    });
+  });
+
   describe('outer steps', () => {
     let fixture: ComponentFixture<NzTestOuterStepsComponent>;
     let testComponent: NzTestOuterStepsComponent;
@@ -47,7 +44,7 @@ describe('steps', () => {
 
     beforeEach(() => {
       fixture = TestBed.createComponent(NzTestOuterStepsComponent);
-      testComponent = fixture.debugElement.componentInstance;
+      testComponent = fixture.componentInstance;
       outStep = fixture.debugElement.query(By.directive(NzStepsComponent));
       innerSteps = fixture.debugElement.queryAll(By.directive(NzStepComponent));
     });
@@ -56,9 +53,7 @@ describe('steps', () => {
       fixture.detectChanges();
       tick();
       fixture.detectChanges();
-      expect(outStep.nativeElement.firstElementChild.className).toBe(
-        'ant-steps ant-steps-horizontal ant-steps-label-horizontal'
-      );
+      expect(outStep.nativeElement.className).toBe('ant-steps ant-steps-horizontal ant-steps-label-horizontal');
       expect(innerSteps[0].nativeElement.className).toBe('ant-steps-item ant-steps-item-active ant-steps-item-process');
       expect(innerSteps[1].nativeElement.className).toBe('ant-steps-item ant-steps-item-wait');
       expect(innerSteps[2].nativeElement.className).toBe('ant-steps-item ant-steps-item-wait');
@@ -100,7 +95,7 @@ describe('steps', () => {
       expect(innerSteps[0].nativeElement.querySelector('.ant-steps-item-subtitle').innerText.trim()).toBe('0subtitle');
       expect(innerSteps[1].nativeElement.querySelector('.ant-steps-item-subtitle')).toBeFalsy();
       expect(innerSteps[2].nativeElement.querySelector('.ant-steps-item-subtitle')).toBeFalsy();
-      testComponent.subtitle = null;
+      testComponent.subtitle = undefined;
       fixture.detectChanges();
     });
 
@@ -141,7 +136,7 @@ describe('steps', () => {
       testComponent.size = 'small';
       testComponent.cdr.markForCheck();
       fixture.detectChanges();
-      expect(outStep.nativeElement.firstElementChild.className).toBe(
+      expect(outStep.nativeElement.className).toBe(
         'ant-steps ant-steps-horizontal ant-steps-label-horizontal ant-steps-small'
       );
     });
@@ -151,7 +146,7 @@ describe('steps', () => {
       testComponent.direction = 'vertical';
       testComponent.cdr.markForCheck();
       fixture.detectChanges();
-      expect(outStep.nativeElement.firstElementChild.className).toBe('ant-steps ant-steps-vertical');
+      expect(outStep.nativeElement.className).toBe('ant-steps ant-steps-vertical');
     });
 
     it('should label placement display correct', () => {
@@ -159,7 +154,7 @@ describe('steps', () => {
       testComponent.labelPlacement = 'vertical';
       testComponent.cdr.markForCheck();
       fixture.detectChanges();
-      expect(outStep.nativeElement.firstElementChild!.classList).toContain('ant-steps-label-vertical');
+      expect(outStep.nativeElement.classList).toContain('ant-steps-label-vertical');
     });
 
     it('should status display correct', fakeAsync(() => {
@@ -197,7 +192,7 @@ describe('steps', () => {
       fixture.detectChanges();
       tick();
       fixture.detectChanges();
-      expect(outStep.nativeElement.firstElementChild!.classList.contains('ant-steps-dot')).toBe(true);
+      expect(outStep.nativeElement.classList.contains('ant-steps-dot')).toBe(true);
       expect(
         innerSteps[0].nativeElement
           .querySelector('.ant-steps-icon')
@@ -224,7 +219,7 @@ describe('steps', () => {
       fixture.detectChanges();
       tick();
       fixture.detectChanges();
-      expect(outStep.nativeElement.firstElementChild!.classList.contains('ant-steps-dot')).toBe(true);
+      expect(outStep.nativeElement.classList.contains('ant-steps-dot')).toBe(true);
       expect(innerSteps[0].nativeElement.querySelector('.ant-steps-icon').firstElementChild.innerText.trim()).toBe(
         'process0'
       );
@@ -497,7 +492,7 @@ describe('steps', () => {
       fixture.detectChanges();
 
       steps
-        .map(step => step.nativeElement.querySelector('.ant-steps'))
+        .map(step => step.nativeElement)
         .forEach((e: HTMLElement) => {
           expect(e.classList).toContain('ant-steps-navigation');
         });
@@ -511,18 +506,18 @@ describe('steps', () => {
       fixture.detectChanges();
       tick();
       fixture.detectChanges();
-      expect(outStep.nativeElement.firstElementChild.classList).toContain('ant-steps-rtl');
+      expect(outStep.nativeElement.classList).toContain('ant-steps-rtl');
 
       fixture.componentInstance.direction = 'ltr';
       fixture.detectChanges();
-      expect(outStep.nativeElement.firstElementChild.classList).not.toContain('ant-steps-rtl');
+      expect(outStep.nativeElement.classList).not.toContain('ant-steps-rtl');
     }));
   });
 });
 
 @Component({
-  // eslint-disable-next-line
   selector: 'nz-test-outer-steps',
+  imports: [NgTemplateOutlet, NzStepsModule],
   template: `
     <nz-steps
       [nzCurrent]="current"
@@ -533,40 +528,41 @@ describe('steps', () => {
       [nzProgressDot]="progressDot"
       [nzStartIndex]="startIndex"
     >
-      <nz-step nzTitle="0title" [nzSubtitle]="subtitle" nzDescription="0description"></nz-step>
-      <nz-step nzTitle="1title" nzDescription="1description"></nz-step>
-      <nz-step nzTitle="2title" nzDescription="2description"></nz-step>
+      <nz-step nzTitle="0title" [nzSubtitle]="subtitle" nzDescription="0description" />
+      <nz-step nzTitle="1title" nzDescription="1description" />
+      <nz-step nzTitle="2title" nzDescription="2description" />
     </nz-steps>
     <ng-template #progressTemplate let-dot let-status="status" let-index="index">
       <span class="insert-span">{{ status }}{{ index }}</span>
-      <ng-template [ngTemplateOutlet]="dot"></ng-template>
+      <ng-template [ngTemplateOutlet]="dot" />
     </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NzTestOuterStepsComponent {
-  @ViewChild('progressTemplate', { static: false }) progressTemplate?: TemplateRef<void>;
+  @ViewChild('progressTemplate', { static: false }) progressTemplate?: NzProgressDotTemplate;
   current = 0;
-  direction = 'horizontal';
-  labelPlacement = 'horizontal';
-  size = 'default';
-  status = 'process';
-  subtitle: string | null = null;
-  progressDot: boolean | TemplateRef<void> = false;
+  direction: NzDirectionVHType = 'horizontal';
+  labelPlacement: NzDirectionVHType = 'horizontal';
+  size: NzSizeDSType = 'default';
+  status: NzStatusType = 'process';
+  subtitle?: string | TemplateRef<void>;
+  progressDot: BooleanInput | NzProgressDotTemplate | undefined | null = false;
   startIndex = 0;
   constructor(public cdr: ChangeDetectorRef) {}
 }
 
 @Component({
+  imports: [NzIconModule, NzStepsModule],
   template: `
     <nz-steps [nzCurrent]="current">
-      <nz-step [nzTitle]="title" [nzDescription]="description" [nzIcon]="icon" [nzStatus]="status"></nz-step>
-      <nz-step [nzTitle]="title" [nzDescription]="description" [nzIcon]="icon" [nzStatus]="status"></nz-step>
-      <nz-step [nzTitle]="title" [nzDescription]="description" [nzIcon]="icon" [nzStatus]="status"></nz-step>
+      <nz-step [nzTitle]="title" [nzDescription]="description" [nzIcon]="icon" [nzStatus]="status" />
+      <nz-step [nzTitle]="title" [nzDescription]="description" [nzIcon]="icon" [nzStatus]="status" />
+      <nz-step [nzTitle]="title" [nzDescription]="description" [nzIcon]="icon" [nzStatus]="status" />
     </nz-steps>
     <ng-template #titleTemplate>titleTemplate</ng-template>
     <ng-template #descriptionTemplate>descriptionTemplate</ng-template>
-    <ng-template #iconTemplate><i nz-icon nzType="smile-o"></i></ng-template>
+    <ng-template #iconTemplate><nz-icon nzType="smile-o" /></ng-template>
   `
 })
 export class NzTestInnerStepStringComponent {
@@ -581,51 +577,49 @@ export class NzTestInnerStepStringComponent {
 }
 
 @Component({
+  imports: [NzIconModule, NzStepsModule],
   template: `
     <nz-steps [nzCurrent]="1">
-      <nz-step [nzTitle]="titleTemplate" [nzDescription]="descriptionTemplate" [nzIcon]="iconTemplate"></nz-step>
-      <nz-step [nzTitle]="titleTemplate" [nzDescription]="descriptionTemplate" [nzIcon]="iconTemplate"></nz-step>
-      <nz-step [nzTitle]="titleTemplate" [nzDescription]="descriptionTemplate" [nzIcon]="iconTemplate"></nz-step>
+      <nz-step [nzTitle]="titleTemplate" [nzDescription]="descriptionTemplate" [nzIcon]="iconTemplate" />
+      <nz-step [nzTitle]="titleTemplate" [nzDescription]="descriptionTemplate" [nzIcon]="iconTemplate" />
+      <nz-step [nzTitle]="titleTemplate" [nzDescription]="descriptionTemplate" [nzIcon]="iconTemplate" />
     </nz-steps>
     <ng-template #titleTemplate>titleTemplate</ng-template>
     <ng-template #descriptionTemplate>descriptionTemplate</ng-template>
-    <ng-template #iconTemplate><i nz-icon nzType="smile-o"></i></ng-template>
+    <ng-template #iconTemplate><nz-icon nzType="smile-o" /></ng-template>
   `
 })
 export class NzTestInnerStepTemplateComponent {}
 
 @Component({
+  imports: [NzStepsModule],
   template: `
     <nz-steps>
-      <nz-step *ngFor="let step of steps; trackBy: trackById"></nz-step>
+      @for (step of steps; track step) {
+        <nz-step />
+      }
     </nz-steps>
   `
 })
 export class NzTestStepForComponent {
   steps = [1, 2, 3];
-
-  trackById(index: number): number {
-    return index;
-  }
-
   updateSteps(): void {
     this.steps.push(4);
   }
 }
 
 @Component({
+  imports: [NzStepsModule],
   template: `
     <nz-steps [nzCurrent]="1">
-      <nz-step *ngFor="let step of steps; trackBy: trackById"></nz-step>
+      @for (step of steps; track step) {
+        <nz-step />
+      }
     </nz-steps>
   `
 })
 export class NzTestStepAsyncComponent implements OnInit {
   steps: number[] = [];
-
-  trackById(index: number): number {
-    return index;
-  }
 
   ngOnInit(): void {
     setTimeout(() => {
@@ -635,13 +629,10 @@ export class NzTestStepAsyncComponent implements OnInit {
 }
 
 @Component({
-  template: `
-    <div [dir]="direction">
-      <nz-test-outer-steps></nz-test-outer-steps>
-    </div>
-  `
+  imports: [BidiModule, NzTestOuterStepsComponent],
+  template: `<nz-test-outer-steps [dir]="direction" />`
 })
 export class NzTestOuterStepsRtlComponent {
   @ViewChild(Dir) dir!: Dir;
-  direction = 'rtl';
+  direction: Direction = 'rtl';
 }

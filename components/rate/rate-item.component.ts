@@ -3,6 +3,7 @@
  * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
  */
 
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -10,11 +11,11 @@ import {
   Input,
   Output,
   TemplateRef,
-  ViewEncapsulation
+  ViewEncapsulation,
+  booleanAttribute
 } from '@angular/core';
 
-import { BooleanInput } from 'ng-zorro-antd/core/types';
-import { InputBoolean } from 'ng-zorro-antd/core/util';
+import { NzIconModule } from 'ng-zorro-antd/icon';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -30,26 +31,25 @@ import { InputBoolean } from 'ng-zorro-antd/core/util';
       <ng-template
         [ngTemplateOutlet]="character || defaultCharacter"
         [ngTemplateOutletContext]="{ $implicit: index }"
-      ></ng-template>
+      />
     </div>
     <div class="ant-rate-star-first" (mouseover)="hoverRate(true); $event.stopPropagation()" (click)="clickRate(true)">
       <ng-template
         [ngTemplateOutlet]="character || defaultCharacter"
         [ngTemplateOutletContext]="{ $implicit: index }"
-      ></ng-template>
+      />
     </div>
 
     <ng-template #defaultCharacter>
-      <i nz-icon nzType="star" nzTheme="fill"></i>
+      <nz-icon nzType="star" nzTheme="fill" />
     </ng-template>
-  `
+  `,
+  imports: [NgTemplateOutlet, NzIconModule]
 })
 export class NzRateItemComponent {
-  static ngAcceptInputType_allowHalf: BooleanInput;
-
-  @Input() character!: TemplateRef<void>;
+  @Input() character!: TemplateRef<{ $implicit: number }>;
   @Input() index = 0;
-  @Input() @InputBoolean() allowHalf: boolean = false;
+  @Input({ transform: booleanAttribute }) allowHalf: boolean = false;
   @Output() readonly itemHover = new EventEmitter<boolean>();
   @Output() readonly itemClick = new EventEmitter<boolean>();
 

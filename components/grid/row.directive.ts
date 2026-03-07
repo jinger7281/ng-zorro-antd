@@ -8,30 +8,30 @@ import { MediaMatcher } from '@angular/cdk/layout';
 import { Platform } from '@angular/cdk/platform';
 import {
   AfterViewInit,
+  DestroyRef,
   Directive,
   ElementRef,
+  inject,
   Input,
-  NgZone,
   OnChanges,
-  OnDestroy,
   OnInit,
-  Optional,
   Renderer2,
   SimpleChanges
 } from '@angular/core';
-import { ReplaySubject, Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ReplaySubject } from 'rxjs';
 
 import { gridResponsiveMap, NzBreakpointKey, NzBreakpointService } from 'ng-zorro-antd/core/services';
 import { IndexableObject } from 'ng-zorro-antd/core/types';
 
-export type NzJustify = 'start' | 'end' | 'center' | 'space-around' | 'space-between';
+export type NzJustify = 'start' | 'end' | 'center' | 'space-around' | 'space-between' | 'space-evenly';
 export type NzAlign = 'top' | 'middle' | 'bottom';
 
 @Directive({
   selector: '[nz-row],nz-row,nz-form-item',
   exportAs: 'nzRow',
   host: {
+    class: 'ant-row',
     '[class.ant-row-top]': `nzAlign === 'top'`,
     '[class.ant-row-middle]': `nzAlign === 'middle'`,
     '[class.ant-row-bottom]': `nzAlign === 'bottom'`,
@@ -40,10 +40,18 @@ export type NzAlign = 'top' | 'middle' | 'bottom';
     '[class.ant-row-center]': `nzJustify === 'center'`,
     '[class.ant-row-space-around]': `nzJustify === 'space-around'`,
     '[class.ant-row-space-between]': `nzJustify === 'space-between'`,
+    '[class.ant-row-space-evenly]': `nzJustify === 'space-evenly'`,
     '[class.ant-row-rtl]': `dir === "rtl"`
   }
 })
-export class NzRowDirective implements OnInit, OnChanges, AfterViewInit, OnDestroy {
+export class NzRowDirective implements OnInit, OnChanges, AfterViewInit {
+  private elementRef = inject(ElementRef);
+  private renderer = inject(Renderer2);
+  private mediaMatcher = inject(MediaMatcher);
+  private platform = inject(Platform);
+  private breakpointService = inject(NzBreakpointService);
+  private directionality = inject(Directionality);
+  private destroyRef = inject(DestroyRef);
   @Input() nzAlign: NzAlign | null = null;
   @Input() nzJustify: NzJustify | null = null;
   @Input() nzGutter: string | number | IndexableObject | [number, number] | [IndexableObject, IndexableObject] | null =
@@ -52,7 +60,6 @@ export class NzRowDirective implements OnInit, OnChanges, AfterViewInit, OnDestr
   readonly actualGutter$ = new ReplaySubject<[number | null, number | null]>(1);
 
   dir: Direction = 'ltr';
-  private readonly destroy$ = new Subject();
 
   getGutter(): [number | null, number | null] {
     const results: [number | null, number | null] = [null, null];
@@ -77,7 +84,7 @@ export class NzRowDirective implements OnInit, OnChanges, AfterViewInit, OnDestr
   setGutterStyle(): void {
     const [horizontalGutter, verticalGutter] = this.getGutter();
     this.actualGutter$.next([horizontalGutter, verticalGutter]);
-    const renderGutter = (name: string, gutter: number | null) => {
+    const renderGutter = (name: string, gutter: number | null): void => {
       const nativeElement = this.elementRef.nativeElement;
       if (gutter !== null) {
         this.renderer.setStyle(nativeElement, name, `-${gutter / 2}px`);
@@ -88,22 +95,10 @@ export class NzRowDirective implements OnInit, OnChanges, AfterViewInit, OnDestr
     renderGutter('margin-top', verticalGutter);
     renderGutter('margin-bottom', verticalGutter);
   }
-  constructor(
-    public elementRef: ElementRef,
-    public renderer: Renderer2,
-    public mediaMatcher: MediaMatcher,
-    public ngZone: NgZone,
-    public platform: Platform,
-    private breakpointService: NzBreakpointService,
-    @Optional() private directionality: Directionality
-  ) {
-    // TODO: move to host after View Engine deprecation
-    this.elementRef.nativeElement.classList.add('ant-row');
-  }
 
   ngOnInit(): void {
     this.dir = this.directionality.value;
-    this.directionality.change?.pipe(takeUntil(this.destroy$)).subscribe((direction: Direction) => {
+    this.directionality.change?.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(direction => {
       this.dir = direction;
     });
 
@@ -120,15 +115,10 @@ export class NzRowDirective implements OnInit, OnChanges, AfterViewInit, OnDestr
     if (this.platform.isBrowser) {
       this.breakpointService
         .subscribe(gridResponsiveMap)
-        .pipe(takeUntil(this.destroy$))
+        .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe(() => {
           this.setGutterStyle();
         });
     }
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 }

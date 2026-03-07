@@ -1,32 +1,29 @@
-import { BidiModule, Dir } from '@angular/cdk/bidi';
-import { Component, NO_ERRORS_SCHEMA, ViewChild } from '@angular/core';
-import { fakeAsync, TestBed, tick, waitForAsync } from '@angular/core/testing';
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
+
+import { BidiModule, Dir, Direction } from '@angular/cdk/bidi';
+import { Component, NO_ERRORS_SCHEMA, provideZoneChangeDetection, ViewChild } from '@angular/core';
+import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 
-import { NzListModule } from '../list';
+import { provideNzIconsTesting } from 'ng-zorro-antd/icon/testing';
+
 import { NzCommentComponent } from './comment.component';
-import { NzCommentModule } from './comment.module';
 import { NzDemoCommentBasicComponent } from './demo/basic';
 import { NzDemoCommentEditorComponent } from './demo/editor';
 import { NzDemoCommentListComponent } from './demo/list';
 import { NzDemoCommentNestedComponent } from './demo/nested';
 
-describe('NzCommentComponent', () => {
-  beforeEach(
-    waitForAsync(() => {
-      TestBed.configureTestingModule({
-        imports: [BidiModule, NzCommentModule, NzListModule],
-        schemas: [NO_ERRORS_SCHEMA],
-        declarations: [
-          NzDemoCommentBasicComponent,
-          NzDemoCommentEditorComponent,
-          NzDemoCommentListComponent,
-          NzDemoCommentNestedComponent,
-          NzTestCommentRtlComponent
-        ]
-      }).compileComponents();
-    })
-  );
+describe('comment', () => {
+  beforeEach(() => {
+    // todo: use zoneless
+    TestBed.configureTestingModule({
+      providers: [provideNzIconsTesting(), provideZoneChangeDetection()],
+      schemas: [NO_ERRORS_SCHEMA]
+    });
+  });
 
   describe('default', () => {
     it('should basic work', () => {
@@ -168,13 +165,14 @@ describe('NzCommentComponent', () => {
 });
 
 @Component({
+  imports: [BidiModule, NzDemoCommentBasicComponent],
   template: `
     <div [dir]="direction">
-      <nz-demo-comment-basic></nz-demo-comment-basic>
+      <nz-demo-comment-basic />
     </div>
   `
 })
 export class NzTestCommentRtlComponent {
   @ViewChild(Dir) dir!: Dir;
-  direction = 'rtl';
+  direction: Direction = 'rtl';
 }

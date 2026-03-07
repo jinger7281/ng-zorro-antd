@@ -1,27 +1,30 @@
-import { Component, DebugElement } from '@angular/core';
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
+
+import { AnimationCallbackEvent, Component, DebugElement, provideZoneChangeDetection } from '@angular/core';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import {
   AbstractControl,
   FormBuilder,
   FormControl,
-  FormControlName,
   FormGroup,
-  FormsModule,
   ReactiveFormsModule,
   ValidatorFn,
   Validators
 } from '@angular/forms';
 import { By } from '@angular/platform-browser';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
-import { ɵComponentBed as ComponentBed, ɵcreateComponentBed as createComponentBed } from 'ng-zorro-antd/core/testing';
+import { provideNzNoAnimation } from 'ng-zorro-antd/core/animation';
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
 import { en_US, NzI18nService } from 'ng-zorro-antd/i18n';
+import { NzInputModule } from 'ng-zorro-antd/input';
 
 import { NzFormControlComponent } from './form-control.component';
 import { NzFormItemComponent } from './form-item.component';
 import { NzFormModule } from './form.module';
 
-const testBedOptions = { imports: [NzFormModule, NoopAnimationsModule, ReactiveFormsModule, FormsModule] };
 const statusMap = {
   warning: 'ant-form-item-has-warning',
   validating: 'ant-form-item-is-validating',
@@ -30,55 +33,70 @@ const statusMap = {
   success: 'ant-form-item-has-success'
 };
 
-describe('nz-form-control', () => {
+describe('form-control', () => {
+  beforeEach(() => {
+    // todo: use zoneless
+    TestBed.configureTestingModule({
+      providers: [provideZoneChangeDetection()]
+    });
+  });
+
   describe('static status', () => {
-    let testBed: ComponentBed<NzTestStaticFormControlComponent>;
+    let fixture: ComponentFixture<NzTestStaticFormControlComponent>;
     let testComponent: NzTestStaticFormControlComponent;
     let formItem: DebugElement;
     let formControl: DebugElement;
+
     beforeEach(() => {
-      testBed = createComponentBed(NzTestStaticFormControlComponent, testBedOptions);
-      testComponent = testBed.component;
-      formItem = testBed.fixture.debugElement.query(By.directive(NzFormItemComponent));
-      formControl = testBed.fixture.debugElement.query(By.directive(NzFormControlComponent));
+      fixture = TestBed.createComponent(NzTestStaticFormControlComponent);
+      testComponent = fixture.componentInstance;
+      formItem = fixture.debugElement.query(By.directive(NzFormItemComponent));
+      formControl = fixture.debugElement.query(By.directive(NzFormControlComponent));
     });
+
     it('should className correct', () => {
       expect(formControl.nativeElement.classList).toContain('ant-form-item-control');
     });
-    it('should hasFeedback work', () => {
-      expect(formItem.nativeElement.classList).not.toContain('ant-form-item-has-feedback');
-      expect(formControl.nativeElement.querySelector('.ant-form-item-children-icon .anticon')).toBeNull();
-      testComponent.hasFeedback = true;
-      testBed.fixture.detectChanges();
-      expect(formItem.nativeElement.classList).toContain('ant-form-item-has-feedback');
-      expect(formControl.nativeElement.querySelector('.ant-form-item-children-icon .anticon')).not.toBeNull();
-    });
+
     it('should status work', () => {
       const statusList: Array<keyof typeof statusMap> = ['warning', 'validating', 'pending', 'error', 'success'];
       statusList.forEach(status => {
         testComponent.status = status;
-        testBed.fixture.detectChanges();
+        fixture.detectChanges();
         expect(formItem.nativeElement.classList).toContain(statusMap[status]);
       });
     });
+
+    it('should get correct form validate animation class', () => {
+      expect(formControl.componentInstance.nzValidateAnimationEnter()).toBe('ant-form-validate_animation-enter');
+      expect(formControl.componentInstance.nzValidateAnimationLeave()).toBe('ant-form-validate_animation-leave');
+    });
   });
+
   describe('reactive status', () => {
-    let testBed: ComponentBed<NzTestReactiveFormControlComponent>;
-    let formGroup: FormGroup;
+    let fixture: ComponentFixture<NzTestReactiveFormControlComponent>;
+    let formGroup: FormGroup<{
+      input: FormControl<string | null>;
+      input2: FormControl<string | null>;
+      input3: FormControl<string | null>;
+    }>;
     let formItems: DebugElement[];
     let formControls: DebugElement[];
+
     beforeEach(() => {
-      testBed = createComponentBed(NzTestReactiveFormControlComponent, testBedOptions);
-      formGroup = testBed.component.formGroup;
-      formItems = testBed.fixture.debugElement.queryAll(By.directive(NzFormItemComponent));
-      formControls = testBed.fixture.debugElement.queryAll(By.directive(NzFormControlComponent));
+      fixture = TestBed.createComponent(NzTestReactiveFormControlComponent);
+      formGroup = fixture.componentInstance.formGroup;
+      formItems = fixture.debugElement.queryAll(By.directive(NzFormItemComponent));
+      formControls = fixture.debugElement.queryAll(By.directive(NzFormControlComponent));
     });
+
     it('should init status correct', () => {
       expect(formItems[0].nativeElement.classList).toContain('ant-form-item');
       expect(formItems[1].nativeElement.classList).toContain('ant-form-item');
       expect(formControls[0].nativeElement.classList).toContain('ant-form-item-control');
       expect(formControls[1].nativeElement.classList).toContain('ant-form-item-control');
     });
+
     it('should valid work', () => {
       formGroup.get('input')!.markAsDirty();
       formGroup.get('input2')!.markAsDirty();
@@ -87,11 +105,12 @@ describe('nz-form-control', () => {
       formGroup.get('input')!.updateValueAndValidity();
       formGroup.get('input2')!.updateValueAndValidity();
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       expect(formItems[0].nativeElement.classList).toContain(statusMap.success);
       expect(formItems[1].nativeElement.classList).toContain(statusMap.success);
     });
+
     it('should invalid work', () => {
       formGroup.get('input')!.markAsDirty();
       formGroup.get('input2')!.markAsDirty();
@@ -100,18 +119,19 @@ describe('nz-form-control', () => {
       formGroup.get('input')!.updateValueAndValidity();
       formGroup.get('input2')!.updateValueAndValidity();
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       expect(formItems[0].nativeElement.classList).toContain(statusMap.error);
       expect(formItems[1].nativeElement.classList).toContain(statusMap.error);
     });
+
     it('should dirty work', () => {
       formGroup.get('input')!.markAsDirty();
       formGroup.get('input2')!.markAsDirty();
       formGroup.get('input')!.updateValueAndValidity();
       formGroup.get('input2')!.updateValueAndValidity();
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       expect(formItems[0].nativeElement.classList).toContain(statusMap.error);
       expect(formItems[1].nativeElement.classList).toContain(statusMap.error);
@@ -121,69 +141,81 @@ describe('nz-form-control', () => {
       formGroup.get('input')!.updateValueAndValidity();
       formGroup.get('input2')!.updateValueAndValidity();
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       expect(formItems[0].nativeElement.classList).not.toContain(statusMap.error);
       expect(formItems[1].nativeElement.classList).not.toContain(statusMap.error);
     });
+
     it('should pending work', () => {
       formGroup.get('input')!.markAsPending();
       formGroup.get('input2')!.markAsPending();
       formGroup.get('input')!.updateValueAndValidity();
       formGroup.get('input2')!.updateValueAndValidity();
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       expect(formItems[0].nativeElement.classList).not.toContain(statusMap.error);
       expect(formItems[1].nativeElement.classList).not.toContain(statusMap.error);
     });
   });
+
   describe('reactive init status', () => {
-    let testBed: ComponentBed<NzTestReactiveFormControlInitStatusComponent>;
+    let fixture: ComponentFixture<NzTestReactiveFormControlInitStatusComponent>;
     let testComponent: NzTestReactiveFormControlInitStatusComponent;
     let formItem: DebugElement;
+
     beforeEach(() => {
-      testBed = createComponentBed(NzTestReactiveFormControlInitStatusComponent, testBedOptions);
-      testComponent = testBed.component;
-      formItem = testBed.fixture.debugElement.query(By.directive(NzFormItemComponent));
+      fixture = TestBed.createComponent(NzTestReactiveFormControlInitStatusComponent);
+      fixture.detectChanges();
+      testComponent = fixture.componentInstance;
+      formItem = fixture.debugElement.query(By.directive(NzFormItemComponent));
     });
+
     it('should init status correct', () => {
       expect(formItem.nativeElement.classList).toContain(statusMap.error);
     });
+
     it('should warning status work', () => {
       testComponent.formGroup.get('input')!.setErrors({ warning: true });
-
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       expect(formItem.nativeElement.classList).toContain(statusMap.warning);
     });
   });
 
   describe('auto tips', () => {
-    let testBed: ComponentBed<NzTestReactiveFormAutoTipsComponent>;
+    let fixture: ComponentFixture<NzTestReactiveFormAutoTipsComponent>;
     let testComponent: NzTestReactiveFormAutoTipsComponent;
-    let formGroup: FormGroup;
+    let formGroup: FormGroup<{
+      username: FormControl<string | null>;
+      mobile: FormControl<string | null>;
+      email: FormControl<string | null>;
+      password: FormControl<string | null>;
+      confirmPassword: FormControl<string | null>;
+    }>;
     let formControls: DebugElement[];
 
     beforeEach(() => {
-      testBed = createComponentBed(NzTestReactiveFormAutoTipsComponent, testBedOptions);
-      testComponent = testBed.component;
+      fixture = TestBed.createComponent(NzTestReactiveFormAutoTipsComponent);
+      testComponent = fixture.componentInstance;
       formGroup = testComponent.formGroup;
-      formControls = testBed.fixture.debugElement.queryAll(By.directive(NzFormControlComponent));
+      formControls = fixture.debugElement.queryAll(By.directive(NzFormControlComponent));
     });
+
     it('should default work ', () => {
-      formGroup.get('userName')!.markAsDirty();
+      formGroup.get('username')!.markAsDirty();
       formGroup.get('mobile')!.markAsDirty();
       formGroup.get('email')!.markAsDirty();
       formGroup.get('password')!.markAsDirty();
       formGroup.get('confirmPassword')!.markAsDirty();
-      formGroup.get('userName')!.updateValueAndValidity();
+      formGroup.get('username')!.updateValueAndValidity();
       formGroup.get('mobile')!.updateValueAndValidity();
       formGroup.get('email')!.updateValueAndValidity();
       formGroup.get('password')!.updateValueAndValidity();
       formGroup.get('confirmPassword')!.updateValueAndValidity();
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       expect(formControls[0].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual('必填项');
       expect(formControls[1].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual('必填项');
@@ -192,13 +224,13 @@ describe('nz-form-control', () => {
       );
       expect(formControls[3].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual('必填项');
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
-      formGroup.get('userName')!.setValue('12345');
+      formGroup.get('username')!.setValue('12345');
       formGroup.get('mobile')!.setValue('12345');
       formGroup.get('email')!.setValue('12345');
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       expect(formControls[0].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual(`最小长度为 6`);
       expect(formControls[1].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual(
@@ -208,7 +240,7 @@ describe('nz-form-control', () => {
         '请输入正确的邮箱'
       );
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       testComponent.formAutoTips = {
         'zh-cn': {
@@ -220,13 +252,13 @@ describe('nz-form-control', () => {
           email: 'The input is not valid email'
         }
       };
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
-      formGroup.get('userName')!.setValue('');
+      formGroup.get('username')!.setValue('');
       formGroup.get('mobile')!.setValue('');
       formGroup.get('email')!.setValue('');
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       expect(formControls[0].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual('请输入');
       expect(formControls[1].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual('请输入');
@@ -235,17 +267,17 @@ describe('nz-form-control', () => {
       );
       expect(formControls[3].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual('请输入');
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       testComponent.showConfirmPassword = true;
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
-      formGroup.get('userName')!.setValue('');
+      formGroup.get('username')!.setValue('');
       formGroup.get('mobile')!.setValue('');
       formGroup.get('email')!.setValue('');
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
-      formControls = testBed.fixture.debugElement.queryAll(By.directive(NzFormControlComponent));
+      formControls = fixture.debugElement.queryAll(By.directive(NzFormControlComponent));
 
       expect(formControls[0].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual('请输入');
       expect(formControls[1].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual('请输入');
@@ -255,23 +287,24 @@ describe('nz-form-control', () => {
       expect(formControls[3].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual('请输入');
       expect(formControls[4].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual('请输入');
     });
+
     it('should i18n work ', () => {
-      formGroup.get('userName')!.markAsDirty();
+      formGroup.get('username')!.markAsDirty();
       formGroup.get('mobile')!.markAsDirty();
       formGroup.get('email')!.markAsDirty();
-      formGroup.get('userName')!.updateValueAndValidity();
+      formGroup.get('username')!.updateValueAndValidity();
       formGroup.get('mobile')!.updateValueAndValidity();
       formGroup.get('email')!.updateValueAndValidity();
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       testComponent.i18n.setLocale(en_US);
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
-      formGroup.get('userName')!.setValue('');
+      formGroup.get('username')!.setValue('');
       formGroup.get('mobile')!.setValue('');
       formGroup.get('email')!.setValue('');
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       expect(formControls[0].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual(
         'Input is required'
@@ -283,11 +316,11 @@ describe('nz-form-control', () => {
         '请输入邮箱/Input is required'
       );
 
-      formGroup.get('userName')!.setValue('12345');
+      formGroup.get('username')!.setValue('12345');
       formGroup.get('mobile')!.setValue('12345');
       formGroup.get('email')!.setValue('12345');
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       expect(formControls[0].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual(
         `MinLength is 6`
@@ -299,48 +332,52 @@ describe('nz-form-control', () => {
         'Please input valid email'
       );
     });
-    it('should nzDisableAutoTips work ', () => {
-      formGroup.get('userName')!.markAsDirty();
+
+    it('should nzDisableAutoTips work ', fakeAsync(() => {
+      formGroup.get('username')!.markAsDirty();
       formGroup.get('mobile')!.markAsDirty();
       formGroup.get('email')!.markAsDirty();
       formGroup.get('password')!.markAsDirty();
-      formGroup.get('userName')!.updateValueAndValidity();
+      formGroup.get('username')!.updateValueAndValidity();
       formGroup.get('mobile')!.updateValueAndValidity();
       formGroup.get('email')!.updateValueAndValidity();
       formGroup.get('password')!.updateValueAndValidity();
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       testComponent.passwordDisableAutoTips = true;
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       formGroup.get('password')!.updateValueAndValidity();
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       expect(formControls[3].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual(
         'Please input your password!'
       );
 
       testComponent.formDisableAutoTips = true;
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
-      formGroup.get('userName')!.setValue('12345');
+      formGroup.get('username')!.setValue('12345');
       formGroup.get('mobile')!.setValue('12345');
       formGroup.get('email')!.setValue('12345');
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
+      tick(300 + 50);
+      fixture.detectChanges();
 
       expect(formControls[0].nativeElement.querySelector('.ant-form-item-explain')).toBeNull();
       expect(formControls[1].nativeElement.querySelector('.ant-form-item-explain')).toBeNull();
       expect(formControls[2].nativeElement.querySelector('.ant-form-item-explain')).toBeNull();
-    });
+    }));
+
     it('should nzErrorTip change work', () => {
       testComponent.passwordDisableAutoTips = true;
 
       formGroup.get('password')!.markAsDirty();
       formGroup.get('password')!.updateValueAndValidity();
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       expect(formControls[3].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual(
         'Please input your password!'
@@ -349,19 +386,57 @@ describe('nz-form-control', () => {
       const passwordErrorTip = '请输入密码';
       testComponent.passwordErrorTip = passwordErrorTip;
 
-      testBed.fixture.detectChanges();
+      fixture.detectChanges();
 
       expect(formControls[3].nativeElement.querySelector('.ant-form-item-explain').textContent).toEqual(
         passwordErrorTip
       );
     });
   });
+
+  describe('NoopAnimations', () => {
+    let fixture: ComponentFixture<NzTestNoopAnimationsFormControlComponent>;
+    let formGroup: FormGroup<{ input: FormControl<string | null> }>;
+    let formControl: DebugElement;
+
+    beforeEach(() => {
+      TestBed.configureTestingModule({
+        providers: [provideZoneChangeDetection(), provideNzNoAnimation()]
+      });
+      fixture = TestBed.createComponent(NzTestNoopAnimationsFormControlComponent);
+      formGroup = fixture.componentInstance.formGroup;
+      formControl = fixture.debugElement.query(By.directive(NzFormControlComponent));
+    });
+
+    it('should call animationComplete immediately when animations are disabled', () => {
+      formGroup.get('input')!.markAsDirty();
+      formGroup.get('input')!.updateValueAndValidity();
+      fixture.detectChanges();
+
+      expect(formControl.nativeElement.querySelector('.ant-form-item-explain')).not.toBeNull();
+
+      const mockEvent: AnimationCallbackEvent = {
+        target: formControl.nativeElement.querySelector('.ant-form-item-explain'),
+        animationComplete: jasmine.createSpy('animationComplete')
+      };
+
+      formControl.componentInstance.onAnimationLeave(mockEvent);
+
+      expect(mockEvent.animationComplete).toHaveBeenCalled();
+    });
+
+    it('should return nz-animate-disabled class when animations are disabled', () => {
+      expect(formControl.componentInstance.nzValidateAnimationEnter()).toBe('nz-animate-disabled');
+      expect(formControl.componentInstance.nzValidateAnimationLeave()).toBe('nz-animate-disabled');
+    });
+  });
 });
 
 @Component({
+  imports: [NzFormModule],
   template: `
     <nz-form-item>
-      <nz-form-control [nzHasFeedback]="hasFeedback" [nzValidateStatus]="status"></nz-form-control>
+      <nz-form-control [nzHasFeedback]="hasFeedback" [nzValidateStatus]="status" />
     </nz-form-item>
   `
 })
@@ -371,6 +446,7 @@ export class NzTestStaticFormControlComponent {
 }
 
 @Component({
+  imports: [ReactiveFormsModule, NzFormModule],
   template: `
     <form [formGroup]="formGroup">
       <nz-form-item>
@@ -390,21 +466,26 @@ export class NzTestStaticFormControlComponent {
   `
 })
 export class NzTestReactiveFormControlComponent {
-  formGroup: FormGroup;
-  validateStatus: string | FormControlName | FormControl;
+  formGroup: FormGroup<{
+    input: FormControl<string | null>;
+    input2: FormControl<string | null>;
+    input3: FormControl<string | null>;
+  }>;
+  validateStatus: FormControl<string | null>;
 
   constructor(private formBuilder: FormBuilder) {
     this.formGroup = this.formBuilder.group({
-      input: ['', [Validators.required]],
-      input2: ['', [Validators.required]],
-      input3: ['', [Validators.required]]
+      input: this.formBuilder.control('', [Validators.required]),
+      input2: this.formBuilder.control('', [Validators.required]),
+      input3: this.formBuilder.control('', [Validators.required])
     });
-    this.validateStatus = this.formGroup.get('input2') as FormControl;
+    this.validateStatus = this.formGroup.controls.input2;
   }
 }
 
 /** https://github.com/NG-ZORRO/ng-zorro-antd/issues/1170 **/
 @Component({
+  imports: [ReactiveFormsModule, NzFormModule],
   template: `
     <form [formGroup]="formGroup">
       <nz-form-item>
@@ -427,11 +508,12 @@ export class NzTestReactiveFormControlInitStatusComponent {
 }
 
 @Component({
+  imports: [ReactiveFormsModule, NzFormModule, NzInputModule],
   template: `
     <form [formGroup]="formGroup" nz-form [nzAutoTips]="formAutoTips" [nzDisableAutoTips]="formDisableAutoTips">
       <nz-form-item>
         <nz-form-control #control>
-          <input nz-input formControlName="userName" />
+          <input nz-input formControlName="username" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
@@ -449,16 +531,24 @@ export class NzTestReactiveFormControlInitStatusComponent {
           <input nz-input type="password" formControlName="password" />
         </nz-form-control>
       </nz-form-item>
-      <nz-form-item *ngIf="showConfirmPassword">
-        <nz-form-control>
-          <input nz-input type="password" formControlName="confirmPassword" />
-        </nz-form-control>
-      </nz-form-item>
+      @if (showConfirmPassword) {
+        <nz-form-item>
+          <nz-form-control>
+            <input nz-input type="password" formControlName="confirmPassword" />
+          </nz-form-control>
+        </nz-form-item>
+      }
     </form>
   `
 })
 export class NzTestReactiveFormAutoTipsComponent {
-  formGroup: FormGroup;
+  formGroup: FormGroup<{
+    username: FormControl<string | null>;
+    mobile: FormControl<string | null>;
+    email: FormControl<string | null>;
+    password: FormControl<string | null>;
+    confirmPassword: FormControl<string | null>;
+  }>;
 
   showConfirmPassword = false;
 
@@ -488,10 +578,13 @@ export class NzTestReactiveFormAutoTipsComponent {
     }
   };
 
-  constructor(private formBuilder: FormBuilder, public i18n: NzI18nService) {
+  constructor(
+    private formBuilder: FormBuilder,
+    public i18n: NzI18nService
+  ) {
     const { required, minLength, email, mobile } = MyValidators;
     this.formGroup = this.formBuilder.group({
-      userName: ['', [required, minLength(6)]],
+      username: ['', [required, minLength(6)]],
       mobile: ['', [required, mobile]],
       email: ['', [required, email]],
       password: ['', [required]],
@@ -504,7 +597,7 @@ export type MyErrorsOptions = { 'zh-cn': string; en: string } & Record<string, N
 export type MyValidationErrors = Record<string, MyErrorsOptions>;
 
 export class MyValidators extends Validators {
-  static minLength(minLength: number): ValidatorFn {
+  static override minLength(minLength: number): ValidatorFn {
     return (control: AbstractControl): MyValidationErrors | null => {
       if (Validators.minLength(minLength)(control) === null) {
         return null;
@@ -532,4 +625,26 @@ function isEmptyInputValue(value: NzSafeAny): boolean {
 
 function isMobile(value: string): boolean {
   return typeof value === 'string' && /(^1\d{10}$)/.test(value);
+}
+
+@Component({
+  imports: [ReactiveFormsModule, NzFormModule],
+  template: `
+    <form [formGroup]="formGroup">
+      <nz-form-item>
+        <nz-form-control nzErrorTip="This field is required">
+          <input formControlName="input" />
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  `
+})
+export class NzTestNoopAnimationsFormControlComponent {
+  formGroup: FormGroup<{ input: FormControl<string | null> }>;
+
+  constructor(private formBuilder: FormBuilder) {
+    this.formGroup = this.formBuilder.group({
+      input: this.formBuilder.control('', [Validators.required])
+    });
+  }
 }

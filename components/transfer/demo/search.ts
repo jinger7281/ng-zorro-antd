@@ -1,9 +1,12 @@
 import { Component, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
-import { TransferItem } from 'ng-zorro-antd/transfer';
+import { NzSwitchModule } from 'ng-zorro-antd/switch';
+import { NzTransferModule, TransferItem } from 'ng-zorro-antd/transfer';
 
 @Component({
   selector: 'nz-demo-transfer-search',
+  imports: [FormsModule, NzSwitchModule, NzTransferModule],
   template: `
     <nz-transfer
       [nzDataSource]="list"
@@ -13,11 +16,9 @@ import { TransferItem } from 'ng-zorro-antd/transfer';
       (nzSearchChange)="search($event)"
       (nzSelectChange)="select($event)"
       (nzChange)="change($event)"
-    ></nz-transfer>
-    <div style="margin-top: 8px;">
-      <nz-switch [(ngModel)]="disabled" nzCheckedChildren="disabled" nzUnCheckedChildren="disabled"></nz-switch>
-      <div></div>
-    </div>
+    />
+    <br />
+    <nz-switch [(ngModel)]="disabled" nzCheckedChildren="disabled" nzUnCheckedChildren="disabled" />
   `
 })
 export class NzDemoTransferSearchComponent implements OnInit {

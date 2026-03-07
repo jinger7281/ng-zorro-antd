@@ -1,7 +1,12 @@
 import { Component, ViewEncapsulation } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+
+import { NzAutocompleteModule } from 'ng-zorro-antd/auto-complete';
+import { NzInputModule } from 'ng-zorro-antd/input';
 
 @Component({
   selector: 'nz-demo-auto-complete-non-case-sensitive',
+  imports: [FormsModule, NzAutocompleteModule, NzInputModule],
   encapsulation: ViewEncapsulation.None,
   template: `
     <div class="example-input">
@@ -12,7 +17,7 @@ import { Component, ViewEncapsulation } from '@angular/core';
         (ngModelChange)="onChange($event)"
         [nzAutocomplete]="auto"
       />
-      <nz-autocomplete [nzDataSource]="filteredOptions" #auto></nz-autocomplete>
+      <nz-autocomplete [nzDataSource]="filteredOptions" #auto />
     </div>
   `
 })

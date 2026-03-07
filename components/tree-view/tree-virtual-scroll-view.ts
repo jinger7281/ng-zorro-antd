@@ -3,11 +3,25 @@
  * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
  */
 
-import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
+import { CdkFixedSizeVirtualScroll, CdkVirtualForOf, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { CdkTree, CdkTreeNodeOutletContext } from '@angular/cdk/tree';
-import { ChangeDetectionStrategy, Component, Input, ViewChild, ViewEncapsulation } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  forwardRef,
+  inject,
+  Input,
+  OnChanges,
+  SimpleChanges,
+  TrackByFunction,
+  ViewChild,
+  ViewEncapsulation
+} from '@angular/core';
 
-import { NzTreeVirtualNodeData } from './node';
+import { NzAnimationTreeCollapseService } from 'ng-zorro-antd/core/animation';
+import { NzSafeAny } from 'ng-zorro-antd/core/types';
+
+import { NzTreeVirtualNodeData, NzTreeVirtualScrollNodeOutletDirective } from './node';
 import { NzTreeNodeOutletDirective } from './outlet';
 import { NzTreeView } from './tree';
 
@@ -24,28 +38,37 @@ const DEFAULT_SIZE = 28;
         [minBufferPx]="nzMinBufferPx"
         [maxBufferPx]="nzMaxBufferPx"
       >
-        <ng-container *cdkVirtualFor="let item of nodes; let i = index">
-          <ng-template nzTreeVirtualScrollNodeOutlet [data]="item"></ng-template>
+        <ng-container *cdkVirtualFor="let item of nodes; let i = index; trackBy: innerTrackBy">
+          <ng-template nzTreeVirtualScrollNodeOutlet [data]="item" [compareBy]="compareBy(i)" />
         </ng-container>
       </cdk-virtual-scroll-viewport>
     </div>
-    <ng-container nzTreeNodeOutlet></ng-container>
+    <ng-container nzTreeNodeOutlet />
   `,
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
-    { provide: NzTreeView, useExisting: NzTreeVirtualScrollViewComponent },
-    { provide: CdkTree, useExisting: NzTreeVirtualScrollViewComponent }
+    NzAnimationTreeCollapseService,
+    { provide: NzTreeView, useExisting: forwardRef(() => NzTreeVirtualScrollViewComponent) },
+    { provide: CdkTree, useExisting: forwardRef(() => NzTreeVirtualScrollViewComponent) }
   ],
   host: {
     class: 'ant-tree',
     '[class.ant-tree-block-node]': 'nzDirectoryTree || nzBlockNode',
     '[class.ant-tree-directory]': 'nzDirectoryTree',
-    '[class.ant-tree-rtl]': `dir === 'rtl'`
-  }
+    '[class.ant-tree-rtl]': `dir() === 'rtl'`
+  },
+  imports: [
+    CdkFixedSizeVirtualScroll,
+    CdkVirtualForOf,
+    CdkVirtualScrollViewport,
+    NzTreeNodeOutletDirective,
+    NzTreeVirtualScrollNodeOutletDirective
+  ]
 })
-export class NzTreeVirtualScrollViewComponent<T> extends NzTreeView<T> {
-  @ViewChild(NzTreeNodeOutletDirective, { static: true }) readonly nodeOutlet!: NzTreeNodeOutletDirective;
+export class NzTreeVirtualScrollViewComponent<T> extends NzTreeView<T> implements OnChanges {
+  @ViewChild(NzTreeNodeOutletDirective, { static: true }) override readonly _nodeOutlet: NzTreeNodeOutletDirective =
+    undefined!;
   @ViewChild(CdkVirtualScrollViewport, { static: true }) readonly virtualScrollViewport!: CdkVirtualScrollViewport;
 
   @Input() nzItemSize = DEFAULT_SIZE;
@@ -54,18 +77,42 @@ export class NzTreeVirtualScrollViewComponent<T> extends NzTreeView<T> {
 
   nodes: Array<NzTreeVirtualNodeData<T>> = [];
 
-  renderNodeChanges(data: T[] | readonly T[]): void {
-    this.nodes = new Array(...data).map((n, i) => this.createNode(n, i));
+  innerTrackBy: TrackByFunction<NzTreeVirtualNodeData<T>> = i => i;
+
+  constructor() {
+    super();
+    const treeCollapseService = inject(NzAnimationTreeCollapseService);
+    treeCollapseService.virtualScroll = true;
+  }
+
+  ngOnChanges({ trackBy }: SimpleChanges): void {
+    if (trackBy) {
+      if (typeof trackBy.currentValue === 'function') {
+        this.innerTrackBy = (index: number, n) => this.trackBy(index, n.data);
+      } else {
+        this.innerTrackBy = i => i;
+      }
+    }
+  }
+
+  compareBy(index: number): (value: T) => NzSafeAny {
+    return (value: T) => (this.trackBy ? this.trackBy(index, value) : value);
+  }
+
+  override renderNodeChanges(data: T[]): void {
+    /* https://github.com/angular/components/blob/21cc21ea3b280c3f82a19f5ec1b679eb1eee1358/src/cdk/tree/tree.ts#L1103
+     * If levelAccessor is used, renderNodes needs to be recalculated, because flattenData (i.e., dataNodes) is used as renderNodes by default in the @angular/components library
+     * If childrenAccessor is used, @angular/components library inner will calculate renderNodes.
+     */
+    const renderNodes = this.levelAccessor ? this.getRenderNodes(data) : [...data];
+    this.nodes = renderNodes.map((n, i) => this.createNode(n, i));
+    this.dataSourceChanged$.next();
+    this.cdr.markForCheck();
   }
 
   private createNode(nodeData: T, index: number): NzTreeVirtualNodeData<T> {
     const node = this._getNodeDef(nodeData, index);
     const context = new CdkTreeNodeOutletContext<T>(nodeData);
-    if (this.treeControl.getLevel) {
-      context.level = this.treeControl.getLevel(nodeData);
-    } else {
-      context.level = 0;
-    }
     return {
       data: nodeData,
       context,

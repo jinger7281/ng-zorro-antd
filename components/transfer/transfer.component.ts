@@ -10,24 +10,31 @@ import {
   Component,
   ElementRef,
   EventEmitter,
+  HostListener,
   Input,
   OnChanges,
-  OnDestroy,
   OnInit,
-  Optional,
   Output,
   QueryList,
+  Renderer2,
   SimpleChanges,
   TemplateRef,
   ViewChildren,
-  ViewEncapsulation
+  ViewEncapsulation,
+  booleanAttribute,
+  inject,
+  DestroyRef
 } from '@angular/core';
-import { Observable, of, Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Observable, of as observableOf, of } from 'rxjs';
+import { distinctUntilChanged, map, withLatestFrom } from 'rxjs/operators';
 
-import { BooleanInput, NgStyleInterface, NzSafeAny } from 'ng-zorro-antd/core/types';
-import { InputBoolean, toArray } from 'ng-zorro-antd/core/util';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzFormNoStatusService, NzFormStatusService } from 'ng-zorro-antd/core/form';
+import { NgClassInterface, NgStyleInterface, NzSafeAny, NzStatus, NzValidateStatus } from 'ng-zorro-antd/core/types';
+import { getStatusClassNames, toArray } from 'ng-zorro-antd/core/util';
 import { NzI18nService, NzTransferI18nInterface } from 'ng-zorro-antd/i18n';
+import { NzIconModule } from 'ng-zorro-antd/icon';
 
 import {
   TransferCanMove,
@@ -42,11 +49,10 @@ import { NzTransferListComponent } from './transfer-list.component';
 @Component({
   selector: 'nz-transfer',
   exportAs: 'nzTransfer',
-  preserveWhitespaces: false,
   template: `
     <nz-transfer-list
       class="ant-transfer-list"
-      [ngStyle]="nzListStyle"
+      [style]="nzListStyle"
       data-direction="left"
       direction="left"
       [titleText]="nzTitles[0]"
@@ -66,54 +72,73 @@ import { NzTransferListComponent } from './transfer-list.component';
       [footer]="nzFooter"
       (handleSelect)="handleLeftSelect($event)"
       (handleSelectAll)="handleLeftSelectAll($event)"
-    ></nz-transfer-list>
-    <div *ngIf="dir !== 'rtl'" class="ant-transfer-operation">
-      <button
-        nz-button
-        (click)="moveToLeft()"
-        [disabled]="nzDisabled || !leftActive"
-        [nzType]="'primary'"
-        [nzSize]="'small'"
-      >
-        <i nz-icon nzType="left"></i>
-        <span *ngIf="nzOperations[1]">{{ nzOperations[1] }}</span>
-      </button>
-      <button
-        nz-button
-        (click)="moveToRight()"
-        [disabled]="nzDisabled || !rightActive"
-        [nzType]="'primary'"
-        [nzSize]="'small'"
-      >
-        <i nz-icon nzType="right"></i>
-        <span *ngIf="nzOperations[0]">{{ nzOperations[0] }}</span>
-      </button>
-    </div>
-    <div *ngIf="dir === 'rtl'" class="ant-transfer-operation">
-      <button
-        nz-button
-        (click)="moveToRight()"
-        [disabled]="nzDisabled || !rightActive"
-        [nzType]="'primary'"
-        [nzSize]="'small'"
-      >
-        <i nz-icon nzType="left"></i>
-        <span *ngIf="nzOperations[0]">{{ nzOperations[0] }}</span>
-      </button>
-      <button
-        nz-button
-        (click)="moveToLeft()"
-        [disabled]="nzDisabled || !leftActive"
-        [nzType]="'primary'"
-        [nzSize]="'small'"
-      >
-        <i nz-icon nzType="right"></i>
-        <span *ngIf="nzOperations[1]">{{ nzOperations[1] }}</span>
-      </button>
-    </div>
+    />
+    @if (dir !== 'rtl') {
+      <div class="ant-transfer-operation">
+        @if (!nzOneWay) {
+          <button
+            nz-button
+            type="button"
+            (click)="moveToLeft()"
+            [disabled]="nzDisabled || !leftActive"
+            nzType="primary"
+            nzSize="small"
+          >
+            <nz-icon nzType="left" />
+            @if (nzOperations[1]) {
+              <span>{{ nzOperations[1] }}</span>
+            }
+          </button>
+        }
+        <button
+          nz-button
+          type="button"
+          (click)="moveToRight()"
+          [disabled]="nzDisabled || !rightActive"
+          nzType="primary"
+          nzSize="small"
+        >
+          <nz-icon nzType="right" />
+          @if (nzOperations[0]) {
+            <span>{{ nzOperations[0] }}</span>
+          }
+        </button>
+      </div>
+    } @else {
+      <div class="ant-transfer-operation">
+        <button
+          nz-button
+          type="button"
+          (click)="moveToRight()"
+          [disabled]="nzDisabled || !rightActive"
+          nzType="primary"
+          nzSize="small"
+        >
+          <nz-icon nzType="left" />
+          @if (nzOperations[0]) {
+            <span>{{ nzOperations[0] }}</span>
+          }
+        </button>
+        @if (!nzOneWay) {
+          <button
+            nz-button
+            type="button"
+            (click)="moveToLeft()"
+            [disabled]="nzDisabled || !leftActive"
+            nzType="primary"
+            nzSize="small"
+          >
+            <nz-icon nzType="right" />
+            @if (nzOperations[1]) {
+              <span>{{ nzOperations[1] }}</span>
+            }
+          </button>
+        }
+      </div>
+    }
     <nz-transfer-list
       class="ant-transfer-list"
-      [ngStyle]="nzListStyle"
+      [style]="nzListStyle"
       data-direction="right"
       direction="right"
       [titleText]="nzTitles[1]"
@@ -131,24 +156,31 @@ import { NzTransferListComponent } from './transfer-list.component';
       [itemUnit]="nzItemUnit || locale?.itemUnit"
       [itemsUnit]="nzItemsUnit || locale?.itemsUnit"
       [footer]="nzFooter"
+      [oneWay]="nzOneWay"
+      (moveToLeft)="moveToLeft()"
       (handleSelect)="handleRightSelect($event)"
       (handleSelectAll)="handleRightSelectAll($event)"
-    ></nz-transfer-list>
+    />
   `,
   host: {
+    class: 'ant-transfer',
     '[class.ant-transfer-rtl]': `dir === 'rtl'`,
     '[class.ant-transfer-disabled]': `nzDisabled`,
     '[class.ant-transfer-customize-list]': `nzRenderList`
   },
   encapsulation: ViewEncapsulation.None,
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [NzTransferListComponent, NzIconModule, NzButtonModule]
 })
-export class NzTransferComponent implements OnInit, OnChanges, OnDestroy {
-  static ngAcceptInputType_nzDisabled: BooleanInput;
-  static ngAcceptInputType_nzShowSelectAll: BooleanInput;
-  static ngAcceptInputType_nzShowSearch: BooleanInput;
-
-  private unsubscribe$ = new Subject<void>();
+export class NzTransferComponent implements OnInit, OnChanges {
+  private destroyRef = inject(DestroyRef);
+  private cdr = inject(ChangeDetectorRef);
+  private i18n = inject(NzI18nService);
+  private elementRef = inject(ElementRef<HTMLElement>);
+  private renderer = inject(Renderer2);
+  private directionality = inject(Directionality);
+  private nzFormStatusService = inject(NzFormStatusService, { optional: true });
+  private nzFormNoStatusService = inject(NzFormNoStatusService, { optional: true });
 
   @ViewChildren(NzTransferListComponent) lists!: QueryList<NzTransferListComponent>;
   locale!: NzTransferI18nInterface;
@@ -157,26 +189,33 @@ export class NzTransferComponent implements OnInit, OnChanges, OnDestroy {
   rightFilter = '';
   dir: Direction = 'ltr';
 
+  // status
+  prefixCls: string = 'ant-transfer';
+  statusCls: NgClassInterface = {};
+  hasFeedback: boolean = false;
+
   // #region fields
 
-  @Input() @InputBoolean() nzDisabled = false;
+  @Input({ transform: booleanAttribute }) nzDisabled = false;
   @Input() nzDataSource: TransferItem[] = [];
   @Input() nzTitles: string[] = ['', ''];
   @Input() nzOperations: string[] = [];
   @Input() nzListStyle: NgStyleInterface = {};
-  @Input() @InputBoolean() nzShowSelectAll = true;
+  @Input({ transform: booleanAttribute }) nzShowSelectAll = true;
   @Input() nzItemUnit?: string;
   @Input() nzItemsUnit?: string;
   @Input() nzCanMove: (arg: TransferCanMove) => Observable<TransferItem[]> = (arg: TransferCanMove) => of(arg.list);
   @Input() nzRenderList: Array<TemplateRef<NzSafeAny> | null> | null = null;
   @Input() nzRender: TemplateRef<NzSafeAny> | null = null;
   @Input() nzFooter: TemplateRef<NzSafeAny> | null = null;
-  @Input() @InputBoolean() nzShowSearch = false;
+  @Input({ transform: booleanAttribute }) nzShowSearch = false;
   @Input() nzFilterOption?: (inputValue: string, item: TransferItem) => boolean;
   @Input() nzSearchPlaceholder?: string;
   @Input() nzNotFoundContent?: string;
   @Input() nzTargetKeys: string[] = [];
   @Input() nzSelectedKeys: string[] = [];
+  @Input() nzStatus: NzStatus = '';
+  @Input({ transform: booleanAttribute }) nzOneWay: boolean = false;
 
   // events
   @Output() readonly nzChange = new EventEmitter<TransferChange>();
@@ -189,9 +228,31 @@ export class NzTransferComponent implements OnInit, OnChanges, OnDestroy {
 
   // left
   leftDataSource: TransferItem[] = [];
+  lastLeftCheckedIndex?: number;
 
   // right
   rightDataSource: TransferItem[] = [];
+  lastRightCheckedIndex?: number;
+
+  isShiftPressed = false;
+
+  @HostListener('window:keydown.shift')
+  onTriggerShiftDown(): void {
+    this.isShiftPressed = true;
+  }
+
+  @HostListener('window:keyup.shift')
+  onTriggerShiftUp(): void {
+    this.isShiftPressed = false;
+  }
+
+  @HostListener('mousedown', ['$event'])
+  onTriggerMouseDown(event: MouseEvent): void {
+    const isInsideTransfer = (event.target as HTMLElement).closest('.ant-transfer-list');
+    if (event.shiftKey && isInsideTransfer) {
+      event.preventDefault();
+    }
+  }
 
   private splitDataSource(): void {
     this.leftDataSource = [];
@@ -211,15 +272,33 @@ export class NzTransferComponent implements OnInit, OnChanges, OnDestroy {
     return this[direction === 'left' ? 'leftDataSource' : 'rightDataSource'].filter(w => w.checked);
   }
 
-  handleLeftSelectAll = (checked: boolean) => this.handleSelect('left', checked);
-  handleRightSelectAll = (checked: boolean) => this.handleSelect('right', checked);
+  handleLeftSelectAll = (checked: boolean): void => this.handleSelect('left', checked);
+  handleRightSelectAll = (checked: boolean): void => this.handleSelect('right', checked);
 
-  handleLeftSelect = (item: TransferItem) => this.handleSelect('left', !!item.checked, item);
-  handleRightSelect = (item: TransferItem) => this.handleSelect('right', !!item.checked, item);
+  handleLeftSelect = (item: TransferItem): void => this.handleSelect('left', !!item.checked, item);
+  handleRightSelect = (item: TransferItem): void => this.handleSelect('right', !!item.checked, item);
 
   handleSelect(direction: TransferDirection, checked: boolean, item?: TransferItem): void {
+    if (item) {
+      const datasource = direction === 'left' ? this.leftDataSource : this.rightDataSource;
+      const currentIndex = datasource.findIndex(i => i.key === item.key);
+      const lastCheckedIndex = this[direction === 'left' ? 'lastLeftCheckedIndex' : 'lastRightCheckedIndex'] ?? -1;
+      if (this.isShiftPressed && lastCheckedIndex > -1) {
+        const start = Math.min(lastCheckedIndex, currentIndex);
+        const end = Math.max(lastCheckedIndex, currentIndex);
+        for (let i = start; i <= end; i++) {
+          const item = datasource[i];
+          if (!item.disabled) {
+            item.checked = checked;
+          }
+        }
+        this.markForCheckAllList();
+      }
+      this[direction === 'left' ? 'lastLeftCheckedIndex' : 'lastRightCheckedIndex'] = currentIndex;
+    }
     const list = this.getCheckedData(direction);
-    this.updateOperationStatus(direction, list.length);
+    const count = list.filter(i => !i.disabled).length;
+    this.updateOperationStatus(direction, count);
     this.nzSelectChange.emit({ direction, checked, list, item });
   }
 
@@ -239,22 +318,22 @@ export class NzTransferComponent implements OnInit, OnChanges, OnDestroy {
       (typeof count === 'undefined' ? this.getCheckedData(direction).filter(w => !w.disabled).length : count) > 0;
   }
 
-  moveToLeft = () => this.moveTo('left');
-  moveToRight = () => this.moveTo('right');
+  moveToLeft = (): void => this.moveTo('left');
+  moveToRight = (): void => this.moveTo('right');
 
   moveTo(direction: TransferDirection): void {
     const oppositeDirection = direction === 'left' ? 'right' : 'left';
     this.updateOperationStatus(oppositeDirection, 0);
     const datasource = direction === 'left' ? this.rightDataSource : this.leftDataSource;
     const moveList = datasource.filter(item => item.checked === true && !item.disabled);
-    this.nzCanMove({ direction, list: moveList }).subscribe(
-      newMoveList =>
+    this.nzCanMove({ direction, list: moveList }).subscribe({
+      next: newMoveList =>
         this.truthMoveTo(
           direction,
           newMoveList.filter(i => !!i)
         ),
-      () => moveList.forEach(i => (i.checked = false))
-    );
+      error: () => moveList.forEach(i => (i.checked = false))
+    });
   }
 
   private truthMoveTo(direction: TransferDirection, list: TransferItem[]): void {
@@ -269,25 +348,11 @@ export class NzTransferComponent implements OnInit, OnChanges, OnDestroy {
     }
     targetDatasource.splice(0, 0, ...list);
     this.updateOperationStatus(oppositeDirection);
-    this.nzChange.emit({
-      from: oppositeDirection,
-      to: direction,
-      list
-    });
+    this.nzChange.emit({ from: oppositeDirection, to: direction, list });
     this.markForCheckAllList();
   }
 
   // #endregion
-
-  constructor(
-    private cdr: ChangeDetectorRef,
-    private i18n: NzI18nService,
-    private elementRef: ElementRef,
-    @Optional() private directionality: Directionality
-  ) {
-    // TODO: move to host after View Engine deprecation
-    this.elementRef.nativeElement.classList.add('ant-transfer');
-  }
 
   private markForCheckAllList(): void {
     if (!this.lists) {
@@ -298,7 +363,7 @@ export class NzTransferComponent implements OnInit, OnChanges, OnDestroy {
 
   private handleNzTargetKeys(): void {
     const keys = toArray(this.nzTargetKeys);
-    const hasOwnKey = (e: TransferItem) => e.hasOwnProperty('key');
+    const hasOwnKey = (e: TransferItem): boolean => e.hasOwnProperty('key');
     this.leftDataSource.forEach(e => {
       if (hasOwnKey(e) && keys.indexOf(e.key) !== -1 && !e.disabled) {
         e.checked = true;
@@ -314,42 +379,68 @@ export class NzTransferComponent implements OnInit, OnChanges, OnDestroy {
         e.checked = true;
       }
     });
-    const term = (ld: TransferItem) => ld.disabled === false && ld.checked === true;
+
+    const term = (ld: TransferItem): boolean => ld.disabled === false && ld.checked === true;
     this.rightActive = this.leftDataSource.some(term);
     this.leftActive = this.rightDataSource.some(term);
   }
 
   ngOnInit(): void {
-    this.i18n.localeChange.pipe(takeUntil(this.unsubscribe$)).subscribe(() => {
+    this.nzFormStatusService?.formStatusChanges
+      .pipe(
+        distinctUntilChanged((pre, cur) => pre.status === cur.status && pre.hasFeedback === cur.hasFeedback),
+        withLatestFrom(this.nzFormNoStatusService ? this.nzFormNoStatusService.noFormStatus : observableOf(false)),
+        map(([{ status, hasFeedback }, noStatus]) => ({ status: noStatus ? '' : status, hasFeedback })),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ status, hasFeedback }) => {
+        this.setStatusStyles(status, hasFeedback);
+      });
+
+    this.i18n.localeChange.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.locale = this.i18n.getLocaleData('Transfer');
       this.markForCheckAllList();
     });
 
     this.dir = this.directionality.value;
-    this.directionality.change?.pipe(takeUntil(this.unsubscribe$)).subscribe((direction: Direction) => {
+    this.directionality.change?.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(direction => {
       this.dir = direction;
       this.cdr.detectChanges();
     });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes.nzDataSource) {
+    const { nzStatus, nzDataSource, nzTargetKeys, nzSelectedKeys } = changes;
+    if (nzDataSource) {
       this.splitDataSource();
       this.updateOperationStatus('left');
       this.updateOperationStatus('right');
       this.cdr.detectChanges();
       this.markForCheckAllList();
     }
-    if (changes.nzTargetKeys) {
+    if (nzTargetKeys) {
       this.handleNzTargetKeys();
     }
-    if (changes.nzSelectedKeys) {
+    if (nzSelectedKeys) {
       this.handleNzSelectedKeys();
+    }
+    if (nzStatus) {
+      this.setStatusStyles(this.nzStatus, this.hasFeedback);
     }
   }
 
-  ngOnDestroy(): void {
-    this.unsubscribe$.next();
-    this.unsubscribe$.complete();
+  private setStatusStyles(status: NzValidateStatus, hasFeedback: boolean): void {
+    // set inner status
+    this.hasFeedback = hasFeedback;
+    this.cdr.markForCheck();
+    // render status if nzStatus is set
+    this.statusCls = getStatusClassNames(this.prefixCls, status, hasFeedback);
+    Object.keys(this.statusCls).forEach(status => {
+      if (this.statusCls[status]) {
+        this.renderer.addClass(this.elementRef.nativeElement, status);
+      } else {
+        this.renderer.removeClass(this.elementRef.nativeElement, status);
+      }
+    });
   }
 }

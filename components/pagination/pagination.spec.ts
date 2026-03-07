@@ -1,57 +1,54 @@
-import { BidiModule, Dir } from '@angular/cdk/bidi';
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
+
+import { BidiModule, Dir, Direction } from '@angular/cdk/bidi';
 import { ENTER } from '@angular/cdk/keycodes';
-import { Component, DebugElement, Injector, ViewChild } from '@angular/core';
-import { ComponentFixture, fakeAsync, TestBed, tick, waitForAsync } from '@angular/core/testing';
+import { Component, DebugElement, provideZoneChangeDetection, signal, ViewChild } from '@angular/core';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 
 import { createKeyboardEvent, dispatchKeyboardEvent } from 'ng-zorro-antd/core/testing';
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
+import en_US from 'ng-zorro-antd/i18n/languages/en_US';
+import { NzI18nService } from 'ng-zorro-antd/i18n/nz-i18n.service';
 
-import en_US from '../i18n/languages/en_US';
-import { NzI18nService } from '../i18n/nz-i18n.service';
 import { NzPaginationComponent } from './pagination.component';
 import { NzPaginationModule } from './pagination.module';
+import type { NzPaginationAlign } from './pagination.types';
 
 declare const viewport: NzSafeAny;
 
 describe('pagination', () => {
-  let injector: Injector;
-
-  beforeEach(
-    waitForAsync(() => {
-      injector = TestBed.configureTestingModule({
-        imports: [BidiModule, NzPaginationModule, NoopAnimationsModule],
-        declarations: [
-          NzTestPaginationComponent,
-          NzTestPaginationRenderComponent,
-          NzTestPaginationTotalComponent,
-          NzTestPaginationAutoResizeComponent,
-          NzTestPaginationRtlComponent
-        ]
-      });
-      TestBed.compileComponents();
-    })
-  );
+  beforeEach(() => {
+    // todo: use zoneless
+    TestBed.configureTestingModule({
+      providers: [provideNoopAnimations(), provideZoneChangeDetection()]
+    });
+  });
 
   describe('pagination complex', () => {
     let fixture: ComponentFixture<NzTestPaginationComponent>;
     let testComponent: NzTestPaginationComponent;
     let pagination: DebugElement;
     let paginationElement: HTMLElement;
+    let paginationRootElement: HTMLElement;
 
     beforeEach(() => {
       fixture = TestBed.createComponent(NzTestPaginationComponent);
       testComponent = fixture.debugElement.componentInstance;
       pagination = fixture.debugElement.query(By.directive(NzPaginationComponent));
       fixture.detectChanges();
-      paginationElement = pagination.nativeElement;
+      paginationRootElement = pagination.nativeElement;
+      paginationElement = pagination.nativeElement.querySelector('ul')!;
     });
 
     describe('not simple mode', () => {
       it('should className correct', () => {
         fixture.detectChanges();
-        expect(paginationElement.classList.contains('ant-pagination')).toBe(true);
+        expect(paginationRootElement.classList.contains('ant-pagination')).toBe(true);
         expect(paginationElement.firstElementChild!.classList.contains('ant-pagination-prev')).toBe(true);
         expect(paginationElement.firstElementChild!.classList.contains('ant-pagination-disabled')).toBe(true);
         expect(paginationElement.lastElementChild!.classList.contains('ant-pagination-next')).toBe(true);
@@ -64,7 +61,7 @@ describe('pagination', () => {
       it('should small size className correct', () => {
         testComponent.size = 'small';
         fixture.detectChanges();
-        expect(paginationElement.classList.contains('mini')).toBe(true);
+        expect(paginationRootElement.classList.contains('ant-pagination-mini')).toBe(true);
       });
 
       it('should pageIndex change work', () => {
@@ -175,19 +172,16 @@ describe('pagination', () => {
         expect(paginationElement.children.length).toBe(9);
       });
 
-      it(
-        'should showSizeChanger work',
-        waitForAsync(() => {
-          testComponent.total = 500;
-          testComponent.pageIndex = 50;
-          testComponent.showSizeChanger = true;
-          fixture.detectChanges();
-          fixture.whenStable().then(() => {
-            expect(paginationElement.children.length).toBe(10);
-            expect(paginationElement.lastElementChild!.classList.contains('ant-pagination-options')).toBe(true);
-          });
-        })
-      );
+      it('should showSizeChanger work', async () => {
+        testComponent.total = 500;
+        testComponent.pageIndex = 50;
+        testComponent.showSizeChanger = true;
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(paginationElement.children.length).toBe(10);
+        expect(paginationElement.lastElementChild!.classList.contains('ant-pagination-options')).toBe(true);
+      });
 
       it('should change pageSize correct', () => {
         testComponent.pageIndex = 5;
@@ -237,7 +231,7 @@ describe('pagination', () => {
         fixture.detectChanges();
         testComponent.disabled = true;
         fixture.detectChanges();
-        expect(paginationElement.classList.contains('ant-pagination-disabled')).toBe(true);
+        expect(paginationRootElement.classList.contains('ant-pagination-disabled')).toBe(true);
       });
     });
 
@@ -245,10 +239,11 @@ describe('pagination', () => {
       beforeEach(() => {
         testComponent.simple = true;
         fixture.detectChanges();
-        paginationElement = pagination.nativeElement;
+        paginationRootElement = pagination.nativeElement;
+        paginationElement = pagination.nativeElement.querySelector('ul')!;
       });
       it('should simple className work', () => {
-        expect(paginationElement.classList.contains('ant-pagination-simple')).toBe(true);
+        expect(paginationRootElement.classList.contains('ant-pagination-simple')).toBe(true);
         expect(paginationElement.firstElementChild!.classList.contains('ant-pagination-prev')).toBe(true);
         expect(paginationElement.lastElementChild!.classList.contains('ant-pagination-next')).toBe(true);
       });
@@ -287,6 +282,22 @@ describe('pagination', () => {
       fixture.detectChanges();
       expect(fixture.debugElement.nativeElement.querySelector('.ant-pagination').children.length).toBe(0);
     });
+    it('should be display one more page when the 4th is selected', () => {
+      testComponent.total = 500;
+      testComponent.pageIndex = 4; // he 4th is selected
+      fixture.detectChanges();
+      expect(paginationElement.children.length).toBe(10);
+      testComponent.pageIndex = 3;
+      fixture.detectChanges();
+      expect(paginationElement.children.length).toBe(9);
+
+      testComponent.pageIndex = 47; // the 4th from last is selected
+      fixture.detectChanges();
+      expect(paginationElement.children.length).toBe(10);
+      testComponent.pageIndex = 48;
+      fixture.detectChanges();
+      expect(paginationElement.children.length).toBe(9);
+    });
   });
 
   describe('pagination render items', () => {
@@ -297,13 +308,34 @@ describe('pagination', () => {
       fixture = TestBed.createComponent(NzTestPaginationRenderComponent);
       pagination = fixture.debugElement.query(By.directive(NzPaginationComponent));
       fixture.detectChanges();
-      paginationElement = pagination.nativeElement;
+      paginationElement = pagination.nativeElement.querySelector('ul')!;
     });
     it('should render correct', () => {
       fixture.detectChanges();
       expect((paginationElement.firstElementChild as HTMLElement).innerText).toBe('Previous');
       expect((paginationElement.lastElementChild as HTMLElement).innerText).toBe('Next');
       expect((paginationElement.children[1] as HTMLElement).innerText).toBe('2');
+    });
+
+    it("should not have the class 'ant-pagination-center' or 'ant-pagination-end' but have the class 'ant-pagination-start'", () => {
+      fixture.detectChanges();
+      expect(pagination.nativeElement.classList).not.toContain('ant-pagination-center');
+      expect(pagination.nativeElement.classList).not.toContain('ant-pagination-end');
+      expect(pagination.nativeElement.classList).toContain('ant-pagination-start');
+    });
+
+    it("should add the class 'ant-pagination-center' when nzAlign is 'center'", () => {
+      fixture.detectChanges();
+      fixture.componentInstance.nzAlign.set('center');
+      fixture.detectChanges();
+      expect(pagination.nativeElement.classList).toContain('ant-pagination-center');
+    });
+
+    it("should add the class 'ant-pagination-end' when nzAlign is 'end'", () => {
+      fixture.detectChanges();
+      fixture.componentInstance.nzAlign.set('end');
+      fixture.detectChanges();
+      expect(pagination.nativeElement.classList).toContain('ant-pagination-end');
     });
   });
 
@@ -318,7 +350,7 @@ describe('pagination', () => {
       testComponent = fixture.debugElement.componentInstance;
       pagination = fixture.debugElement.query(By.directive(NzPaginationComponent));
       fixture.detectChanges();
-      paginationElement = pagination.nativeElement;
+      paginationElement = pagination.nativeElement.querySelector('ul')!;
     });
 
     it('should render correct', () => {
@@ -340,7 +372,7 @@ describe('pagination', () => {
     viewport.set(1200, 350);
     fixture.detectChanges();
     let paginationElement = pagination.nativeElement;
-    expect(paginationElement.classList).not.toContain('mini');
+    expect(paginationElement.classList).not.toContain('ant-pagination-mini');
 
     viewport.set(350, 350);
     window.dispatchEvent(new Event('resize'));
@@ -348,7 +380,7 @@ describe('pagination', () => {
     tick(1000);
     fixture.detectChanges();
     paginationElement = pagination.nativeElement;
-    expect(paginationElement.classList).toContain('mini');
+    expect(paginationElement.classList).toContain('ant-pagination-mini');
     viewport.reset();
   }));
 
@@ -356,7 +388,7 @@ describe('pagination', () => {
     const fixture = TestBed.createComponent(NzTestPaginationComponent);
     const dl = fixture.debugElement;
     fixture.detectChanges();
-    injector.get(NzI18nService).setLocale(en_US);
+    TestBed.inject(NzI18nService).setLocale(en_US);
     fixture.detectChanges();
     const prevText = (dl.query(By.css('.ant-pagination-prev')).nativeElement as HTMLElement).title;
     expect(prevText).toBe(en_US.Pagination.prev_page);
@@ -373,7 +405,7 @@ describe('pagination', () => {
       fixture = TestBed.createComponent(NzTestPaginationRtlComponent);
       pagination = fixture.debugElement.query(By.directive(NzPaginationComponent));
       fixture.detectChanges();
-      paginationElement = pagination.nativeElement;
+      paginationElement = pagination.nativeElement.querySelector('ul')!;
     });
 
     it('should pagination className correct on dir change', () => {
@@ -406,6 +438,7 @@ describe('pagination', () => {
 });
 
 @Component({
+  imports: [NzPaginationModule],
   template: `
     <nz-pagination
       [nzSimple]="simple"
@@ -420,7 +453,7 @@ describe('pagination', () => {
       [nzPageSizeOptions]="pageSizeOptions"
       [nzShowSizeChanger]="showSizeChanger"
       [nzShowQuickJumper]="showQuickJumper"
-    ></nz-pagination>
+    />
   `
 })
 export class NzTestPaginationComponent {
@@ -429,36 +462,43 @@ export class NzTestPaginationComponent {
   pageSize = 10;
   total = 50;
   disabled = false;
-  pageIndexChange = jasmine.createSpy('pageIndexChange callback');
-  pageSizeChange = jasmine.createSpy('pageSizeChange callback');
+  pageIndexChange = jasmine.createSpy<NzSafeAny>('pageIndexChange callback');
+  pageSizeChange = jasmine.createSpy<NzSafeAny>('pageSizeChange callback');
   showQuickJumper = false;
   showSizeChanger = false;
   hideOnSinglePage = false;
   pageSizeOptions = [10, 20, 30, 40];
   simple = false;
-  size = '';
+  size: 'default' | 'small' = 'default';
 }
 
 @Component({
+  imports: [NzPaginationModule],
   template: `
-    <nz-pagination [nzPageIndex]="1" [nzTotal]="50" [nzItemRender]="renderItemTemplate"></nz-pagination>
+    <nz-pagination [nzPageIndex]="1" [nzTotal]="50" [nzItemRender]="renderItemTemplate" [nzAlign]="nzAlign()" />
     <ng-template #renderItemTemplate let-type let-page="page">
-      <a *ngIf="type === 'prev'">Previous</a>
-      <a *ngIf="type === 'next'">Next</a>
-      <a *ngIf="type === 'page'">{{ page * 2 }}</a>
+      @switch (type) {
+        @case ('prev') {
+          <a>Previous</a>
+        }
+        @case ('next') {
+          <a>Next</a>
+        }
+        @case ('page') {
+          <a>{{ page * 2 }}</a>
+        }
+      }
     </ng-template>
   `
 })
-export class NzTestPaginationRenderComponent {}
+export class NzTestPaginationRenderComponent {
+  nzAlign = signal<NzPaginationAlign>('start');
+}
 
 @Component({
+  imports: [NzPaginationModule],
   template: `
-    <nz-pagination
-      [(nzPageIndex)]="pageIndex"
-      [nzTotal]="85"
-      [nzPageSize]="20"
-      [nzShowTotal]="rangeTemplate"
-    ></nz-pagination>
+    <nz-pagination [(nzPageIndex)]="pageIndex" [nzTotal]="85" [nzPageSize]="20" [nzShowTotal]="rangeTemplate" />
     <ng-template #rangeTemplate let-range="range" let-total>
       {{ range[0] }}-{{ range[1] }} of {{ total }} items
     </ng-template>
@@ -469,25 +509,22 @@ export class NzTestPaginationTotalComponent {
 }
 
 @Component({
-  template: ` <nz-pagination nzResponsive></nz-pagination> `
+  imports: [NzPaginationModule],
+  template: `<nz-pagination nzResponsive />`
 })
 export class NzTestPaginationAutoResizeComponent {}
 
 @Component({
+  imports: [BidiModule, NzPaginationModule],
   template: `
     <div [dir]="direction">
-      <nz-pagination
-        [nzSimple]="false"
-        [(nzPageIndex)]="pageIndex"
-        [nzTotal]="total"
-        [(nzPageSize)]="pageSize"
-      ></nz-pagination>
+      <nz-pagination [nzSimple]="false" [(nzPageIndex)]="pageIndex" [nzTotal]="total" [(nzPageSize)]="pageSize" />
     </div>
   `
 })
 export class NzTestPaginationRtlComponent {
   @ViewChild(Dir) dir!: Dir;
-  direction = 'rtl';
+  direction: Direction = 'rtl';
   pageIndex = 1;
   pageSize = 10;
   total = 50;

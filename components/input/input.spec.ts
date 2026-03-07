@@ -1,23 +1,40 @@
-import { Component, DebugElement } from '@angular/core';
-import { ComponentFixture, fakeAsync, flush, TestBed, waitForAsync } from '@angular/core/testing';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
+
+import { BidiModule, Direction } from '@angular/cdk/bidi';
+import {
+  Component,
+  DebugElement,
+  provideZoneChangeDetection,
+  signal,
+  viewChild,
+  type WritableSignal
+} from '@angular/core';
+import { ComponentFixture, TestBed, fakeAsync, flush } from '@angular/core/testing';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 
-import { NzIconTestModule } from 'ng-zorro-antd/icon/testing';
+import { NZ_FORM_SIZE } from 'ng-zorro-antd/core/form';
+import { NzSizeLDSType, NzStatus, NzVariant } from 'ng-zorro-antd/core/types';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { provideNzIconsTesting } from 'ng-zorro-antd/icon/testing';
+import { NzInputWrapperComponent } from 'ng-zorro-antd/input/input-wrapper.component';
+import { NZ_SPACE_COMPACT_SIZE } from 'ng-zorro-antd/space';
 
+import { NzFormControlStatusType, NzFormModule } from '../form';
 import { NzInputDirective } from './input.directive';
 import { NzInputModule } from './input.module';
 
 describe('input', () => {
-  beforeEach(
-    waitForAsync(() => {
-      TestBed.configureTestingModule({
-        imports: [NzInputModule, FormsModule, ReactiveFormsModule, NzIconTestModule],
-        declarations: [NzTestInputWithInputComponent, NzTestInputWithTextAreaComponent, NzTestInputFormComponent],
-        providers: []
-      }).compileComponents();
-    })
-  );
+  beforeEach(() => {
+    // todo: use zoneless
+    TestBed.configureTestingModule({
+      providers: [provideNzIconsTesting(), provideZoneChangeDetection()]
+    });
+  });
+
   describe('single input', () => {
     describe('input with input element', () => {
       let fixture: ComponentFixture<NzTestInputWithInputComponent>;
@@ -30,10 +47,12 @@ describe('input', () => {
         fixture.detectChanges();
         inputElement = fixture.debugElement.query(By.directive(NzInputDirective));
       });
+
       it('should className correct', () => {
         fixture.detectChanges();
         expect(inputElement.nativeElement.classList).toContain('ant-input');
       });
+
       it('should disabled work', () => {
         fixture.detectChanges();
         expect(inputElement.nativeElement.classList).not.toContain('ant-input-disabled');
@@ -41,6 +60,7 @@ describe('input', () => {
         fixture.detectChanges();
         expect(inputElement.nativeElement.classList).toContain('ant-input-disabled');
       });
+
       it('should nzSize work', () => {
         testComponent.size = 'small';
         fixture.detectChanges();
@@ -50,6 +70,62 @@ describe('input', () => {
         fixture.detectChanges();
         expect(inputElement.nativeElement.classList).toContain('ant-input');
         expect(inputElement.nativeElement.classList).toContain('ant-input-lg');
+      });
+
+      it('should nzStepperLess work', () => {
+        fixture.detectChanges();
+        expect(inputElement.nativeElement.classList).toContain('ant-input-stepperless');
+        testComponent.stepperless = false;
+        fixture.detectChanges();
+        expect(inputElement.nativeElement.classList).not.toContain('ant-input-stepperless');
+      });
+
+      it('should be focus / blur work', async () => {
+        const input = inputElement.nativeElement;
+        testComponent.inputDirective().focus();
+        expect(document.activeElement).toBe(input);
+        testComponent.inputDirective().blur();
+        expect(document.activeElement).not.toBe(input);
+
+        testComponent.value = 'NG-ZORRO';
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        testComponent.inputDirective().focus({ cursor: 'start' });
+        expect(input.selectionStart).toBe(0);
+        expect(input.selectionEnd).toBe(0);
+        testComponent.inputDirective().focus({ cursor: 'end' });
+        expect(input.selectionStart).toBe(testComponent.value.length);
+        expect(input.selectionEnd).toBe(testComponent.value.length);
+        testComponent.inputDirective().focus({ cursor: 'all' });
+        expect(input.selectionStart).toBe(0);
+        expect(input.selectionEnd).toBe(testComponent.value.length);
+      });
+
+      describe('should nzVariant work', () => {
+        it('filled', () => {
+          fixture.detectChanges();
+          expect(inputElement.nativeElement.classList).not.toContain('ant-input-filled');
+          testComponent.variant = 'filled';
+          fixture.detectChanges();
+          expect(inputElement.nativeElement.classList).toContain('ant-input-filled');
+        });
+
+        it('borderless', () => {
+          fixture.detectChanges();
+          expect(inputElement.nativeElement.classList).not.toContain('ant-input-borderless');
+          testComponent.variant = 'borderless';
+          fixture.detectChanges();
+          expect(inputElement.nativeElement.classList).toContain('ant-input-borderless');
+        });
+
+        it('underlined', () => {
+          fixture.detectChanges();
+          expect(inputElement.nativeElement.classList).not.toContain('ant-input-borderless');
+          testComponent.variant = 'underlined';
+          fixture.detectChanges();
+          expect(inputElement.nativeElement.classList).toContain('ant-input-underlined');
+        });
       });
     });
 
@@ -82,48 +158,288 @@ describe('input', () => {
         fixture.detectChanges();
         inputElement = fixture.debugElement.query(By.directive(NzInputDirective));
       });
+
       it('should set disabled work', fakeAsync(() => {
         flush();
-        expect(inputElement.nativeElement.attributes.getNamedItem('disabled')).toBeNull();
+        expect(inputElement.nativeElement.classList).not.toContain('ant-input-disabled');
+        expect(inputElement.nativeElement.getAttribute('disabled')).toBeNull();
         testComponent.disable();
         flush();
         fixture.detectChanges();
-        expect(inputElement.nativeElement.attributes.getNamedItem('disabled')).toBeDefined();
+        expect(inputElement.nativeElement.classList).toContain('ant-input-disabled');
+        expect(inputElement.nativeElement.getAttribute('disabled')).toBe('true');
       }));
+    });
+  });
+
+  describe('input RTL', () => {
+    let fixture: ComponentFixture<NzTestInputWithDirComponent>;
+    let inputElement: DebugElement;
+    let inputGroupElement: DebugElement;
+
+    beforeEach(() => {
+      fixture = TestBed.createComponent(NzTestInputWithDirComponent);
+      fixture.detectChanges();
+      inputElement = fixture.debugElement.query(By.directive(NzInputDirective));
+      inputGroupElement = fixture.debugElement.query(By.directive(NzInputWrapperComponent));
+    });
+
+    it('should className correct on dir change', () => {
+      expect(inputElement.nativeElement.classList).not.toContain('ant-input-rtl');
+      expect(inputGroupElement.nativeElement.classList).not.toContain('ant-input-group-wrapper-rtl');
+
+      fixture.componentInstance.dir = 'rtl';
+      fixture.detectChanges();
+      expect(inputElement.nativeElement.classList).toContain('ant-input-rtl');
+      expect(inputGroupElement.nativeElement.classList).toContain('ant-input-group-wrapper-rtl');
+    });
+  });
+
+  describe('input with status', () => {
+    let fixture: ComponentFixture<NzTestInputWithStatusComponent>;
+    let inputElement: DebugElement;
+
+    beforeEach(() => {
+      fixture = TestBed.createComponent(NzTestInputWithStatusComponent);
+      fixture.detectChanges();
+      inputElement = fixture.debugElement.query(By.directive(NzInputDirective));
+    });
+
+    it('should className correct', () => {
+      fixture.detectChanges();
+      expect(inputElement.nativeElement.classList).toContain('ant-input-status-error');
+
+      fixture.componentInstance.status = 'warning';
+      fixture.detectChanges();
+      expect(inputElement.nativeElement.className).toContain('ant-input-status-warning');
+
+      fixture.componentInstance.status = '';
+      fixture.detectChanges();
+      expect(inputElement.nativeElement.className).not.toContain('ant-input-status-warning');
+    });
+  });
+
+  describe('input in form', () => {
+    let fixture: ComponentFixture<NzTestInputInFormComponent>;
+    let inputElement: DebugElement;
+
+    beforeEach(() => {
+      fixture = TestBed.createComponent(NzTestInputInFormComponent);
+      fixture.detectChanges();
+      inputElement = fixture.debugElement.query(By.directive(NzInputDirective));
+    });
+
+    it('should className correct', () => {
+      fixture.detectChanges();
+      expect(inputElement.nativeElement.classList).toContain('ant-input-status-error');
+      expect(inputElement.nativeElement.nextSibling.classList).toContain('ant-form-item-feedback-icon-error');
+
+      fixture.componentInstance.status = 'success';
+      fixture.detectChanges();
+      expect(inputElement.nativeElement.classList).toContain('ant-input-status-success');
+      expect(inputElement.nativeElement.nextSibling.classList).toContain('ant-form-item-feedback-icon-success');
+
+      fixture.componentInstance.status = 'warning';
+      fixture.detectChanges();
+      expect(inputElement.nativeElement.classList).toContain('ant-input-status-warning');
+      expect(inputElement.nativeElement.nextSibling.classList).toContain('ant-form-item-feedback-icon-warning');
+
+      fixture.componentInstance.status = 'validating';
+      fixture.detectChanges();
+      expect(inputElement.nativeElement.classList).toContain('ant-input-status-validating');
+      expect(inputElement.nativeElement.nextSibling.classList).toContain('ant-form-item-feedback-icon-validating');
+
+      fixture.componentInstance.feedback = false;
+      fixture.detectChanges();
+      expect(inputElement.nativeElement.classList).toContain('ant-input-status-validating');
+      expect(inputElement.nativeElement.nextSibling?.classList).not.toContain('ant-form-item-feedback-icon');
+    });
+  });
+
+  describe('input with type', () => {
+    let fixture: ComponentFixture<NzTestInputWithTypeComponent>;
+    let inputElement: DebugElement;
+    let component: NzTestInputWithTypeComponent;
+
+    beforeEach(() => {
+      fixture = TestBed.createComponent(NzTestInputWithTypeComponent);
+      fixture.detectChanges();
+      inputElement = fixture.debugElement.query(By.directive(NzInputDirective));
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+    });
+
+    it('should type correct', () => {
+      expect(inputElement.nativeElement.type).toEqual('text');
+
+      component.type = 'password';
+      fixture.detectChanges();
+      expect(inputElement.nativeElement.type).toEqual('password');
+
+      component.type = 'number';
+      fixture.detectChanges();
+      expect(inputElement.nativeElement.type).toEqual('number');
+
+      component.type = '';
+      fixture.detectChanges();
+      expect(inputElement.nativeElement.type).toEqual('text');
+    });
+  });
+
+  describe('finalSize', () => {
+    let fixture: ComponentFixture<TestInputFinalSizeComponent>;
+    let inputElement: HTMLButtonElement;
+    let component: TestInputFinalSizeComponent;
+    let formSizeSignal: WritableSignal<NzSizeLDSType | undefined>;
+    let compactSizeSignal: WritableSignal<NzSizeLDSType>;
+
+    beforeEach(() => {
+      compactSizeSignal = signal<NzSizeLDSType>('large');
+      formSizeSignal = signal<NzSizeLDSType | undefined>('default');
+    });
+
+    afterEach(() => {
+      TestBed.resetTestingModule();
+    });
+
+    it('should set correctly the size from the formSize signal', () => {
+      TestBed.configureTestingModule({
+        providers: [
+          { provide: NZ_FORM_SIZE, useValue: formSizeSignal },
+          { provide: NZ_SPACE_COMPACT_SIZE, useValue: compactSizeSignal }
+        ]
+      });
+      fixture = TestBed.createComponent(TestInputFinalSizeComponent);
+      component = fixture.componentInstance;
+      inputElement = fixture.debugElement.query(By.directive(NzInputDirective)).nativeElement;
+      fixture.detectChanges();
+      formSizeSignal.set('large');
+      fixture.detectChanges();
+      expect(inputElement.classList).toContain('ant-input-lg');
+    });
+    it('should set correctly the size from the compactSize signal', () => {
+      TestBed.configureTestingModule({
+        providers: [{ provide: NZ_SPACE_COMPACT_SIZE, useValue: compactSizeSignal }]
+      });
+      fixture = TestBed.createComponent(TestInputFinalSizeComponent);
+      component = fixture.componentInstance;
+      inputElement = fixture.debugElement.query(By.directive(NzInputDirective)).nativeElement;
+      fixture.detectChanges();
+      compactSizeSignal.set('large');
+      fixture.detectChanges();
+      expect(inputElement.classList).toContain('ant-input-lg');
+    });
+    it('should set correctly the size from the nzSize input', () => {
+      TestBed.configureTestingModule({});
+      fixture = TestBed.createComponent(TestInputFinalSizeComponent);
+      component = fixture.componentInstance;
+      inputElement = fixture.debugElement.query(By.directive(NzInputDirective)).nativeElement;
+      fixture.detectChanges();
+      component.size = 'large';
+      fixture.detectChanges();
+      expect(inputElement.classList).toContain('ant-input-lg');
     });
   });
 });
 
 @Component({
-  template: ` <input nz-input [nzSize]="size" [disabled]="disabled" /> `
+  imports: [BidiModule, NzInputModule, NzIconModule],
+  template: `
+    <div [dir]="dir">
+      <input nz-input />
+      <nz-input-wrapper>
+        <input type="text" nz-input />
+        <nz-icon nzInputAddonAfter nzType="setting" />
+      </nz-input-wrapper>
+    </div>
+  `
 })
-export class NzTestInputWithInputComponent {
-  size = 'default';
-  disabled = false;
+export class NzTestInputWithDirComponent {
+  dir: Direction = 'ltr';
 }
 
 @Component({
-  template: ` <textarea nz-input></textarea> `
+  imports: [NzInputModule],
+  template: `
+    <input
+      nz-input
+      [nzSize]="size"
+      [disabled]="disabled"
+      [nzVariant]="variant"
+      [nzStepperless]="stepperless"
+      [value]="value"
+    />
+  `
+})
+export class NzTestInputWithInputComponent {
+  size: NzSizeLDSType = 'default';
+  disabled = false;
+  stepperless = true;
+  variant: NzVariant = 'outlined';
+  value = 'NzTestInput';
+  inputDirective = viewChild.required(NzInputDirective);
+}
+
+@Component({
+  imports: [NzInputModule],
+  template: `<textarea nz-input></textarea>`
 })
 export class NzTestInputWithTextAreaComponent {}
 
 @Component({
+  imports: [ReactiveFormsModule, NzInputModule],
   template: `
-    <form [formGroup]="formGroup">
-      <input nz-input formControlName="input" />
+    <form>
+      <input nz-input [formControl]="formControl" />
     </form>
   `
 })
 export class NzTestInputFormComponent {
-  formGroup: FormGroup;
-
-  constructor(private formBuilder: FormBuilder) {
-    this.formGroup = this.formBuilder.group({
-      input: ['abc']
-    });
-  }
+  formControl = new FormControl('abc');
 
   disable(): void {
-    this.formGroup.disable();
+    this.formControl.disable();
   }
+}
+
+// status
+@Component({
+  imports: [NzInputModule],
+  template: `<input nz-input [nzStatus]="status" />`
+})
+export class NzTestInputWithStatusComponent {
+  status: NzStatus = 'error';
+}
+
+@Component({
+  imports: [NzFormModule, NzInputModule],
+  template: `
+    <form nz-form>
+      <nz-form-item>
+        <nz-form-control [nzHasFeedback]="feedback" [nzValidateStatus]="status">
+          <input nz-input />
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  `
+})
+export class NzTestInputInFormComponent {
+  status: NzFormControlStatusType = 'error';
+  feedback = true;
+}
+
+@Component({
+  imports: [NzInputModule],
+  template: `<input nz-input [type]="type" />`
+})
+export class NzTestInputWithTypeComponent {
+  type: string | null = null;
+}
+
+@Component({
+  imports: [NzInputModule],
+  template: `<input nz-input [nzSize]="size" />`
+})
+export class TestInputFinalSizeComponent {
+  size: NzSizeLDSType = 'default';
 }

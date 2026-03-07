@@ -5,20 +5,29 @@
 
 import { ChangeDetectionStrategy, Component, Input, TemplateRef, ViewEncapsulation } from '@angular/core';
 
+import { NzOutletModule } from 'ng-zorro-antd/core/outlet';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+
+/**
+ * @deprecated Will be removed in v22.0.0. This component will be removed along with input-group.
+ */
 @Component({
   selector: '[nz-input-group-slot]',
-  preserveWhitespaces: false,
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <i nz-icon [nzType]="icon" *ngIf="icon"></i>
+    @if (icon) {
+      <nz-icon [nzType]="icon" />
+    }
     <ng-container *nzStringTemplateOutlet="template">{{ template }}</ng-container>
+    <ng-content />
   `,
   host: {
     '[class.ant-input-group-addon]': `type === 'addon'`,
     '[class.ant-input-prefix]': `type === 'prefix'`,
     '[class.ant-input-suffix]': `type === 'suffix'`
-  }
+  },
+  imports: [NzIconModule, NzOutletModule]
 })
 export class NzInputGroupSlotComponent {
   @Input() icon?: string | null = null;

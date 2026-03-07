@@ -11,51 +11,60 @@ import {
   Input,
   OnChanges,
   Output,
-  ViewEncapsulation
+  ViewEncapsulation,
+  booleanAttribute,
+  inject
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
+import { NzIconModule } from 'ng-zorro-antd/icon';
+
+/**
+ * @deprecated Will be removed in v22.0.0. Please use `nz-input-wrapper` instead.
+ */
 @Component({
   selector: '[nz-transfer-search]',
   exportAs: 'nzTransferSearch',
-  preserveWhitespaces: false,
   template: `
+    <span class="ant-input-prefix">
+      <nz-icon nzType="search" />
+    </span>
     <input
       [(ngModel)]="value"
       (ngModelChange)="_handle()"
       [disabled]="disabled"
       [placeholder]="placeholder"
-      class="ant-input ant-transfer-list-search"
-      [ngClass]="{ 'ant-input-disabled': disabled }"
+      class="ant-input"
+      [class.ant-input-disabled]="disabled"
     />
-    <a *ngIf="value && value.length > 0; else def" class="ant-transfer-list-search-action" (click)="_clear()">
-      <i nz-icon nzType="close-circle"></i>
-    </a>
-    <ng-template #def>
-      <span class="ant-transfer-list-search-action"><i nz-icon nzType="search"></i></span>
-    </ng-template>
+    @if (value && value.length > 0) {
+      <span class="ant-input-suffix" (click)="_clear()">
+        <nz-icon nzType="close-circle" nzTheme="fill" class="ant-input-clear-icon" />
+      </span>
+    }
   `,
   encapsulation: ViewEncapsulation.None,
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [FormsModule, NzIconModule]
 })
 export class NzTransferSearchComponent implements OnChanges {
   // region: fields
+  private cdr = inject(ChangeDetectorRef);
 
   @Input() placeholder?: string;
   @Input() value?: string;
-  @Input() disabled: boolean = false;
+  @Input({ transform: booleanAttribute }) disabled: boolean = false;
 
   @Output() readonly valueChanged = new EventEmitter<string>();
   @Output() readonly valueClear = new EventEmitter<void>();
 
   // endregion
 
-  constructor(private cdr: ChangeDetectorRef) {}
-
-  _handle(): void {
+  protected _handle(): void {
     this.valueChanged.emit(this.value);
   }
 
-  _clear(): void {
+  protected _clear(): void {
     if (this.disabled) {
       return;
     }

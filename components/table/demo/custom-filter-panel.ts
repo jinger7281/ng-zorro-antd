@@ -1,4 +1,11 @@
 import { Component } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzDropdownModule } from 'ng-zorro-antd/dropdown';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzTableModule } from 'ng-zorro-antd/table';
 
 interface DataItem {
   name: string;
@@ -7,6 +14,7 @@ interface DataItem {
 }
 @Component({
   selector: 'nz-demo-table-custom-filter-panel',
+  imports: [FormsModule, NzButtonModule, NzDropdownModule, NzIconModule, NzInputModule, NzTableModule],
   template: `
     <nz-table #nzTable [nzData]="listOfDisplayData" nzTableLayout="fixed">
       <thead>
@@ -14,7 +22,7 @@ interface DataItem {
           <th nzCustomFilter>
             Name
             <nz-filter-trigger [(nzVisible)]="visible" [nzActive]="searchValue.length > 0" [nzDropdownMenu]="menu">
-              <i nz-icon nzType="search"></i>
+              <nz-icon nzType="search" />
             </nz-filter-trigger>
           </th>
           <th>Age</th>
@@ -22,11 +30,13 @@ interface DataItem {
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let data of nzTable.data">
-          <td>{{ data.name }}</td>
-          <td>{{ data.age }}</td>
-          <td>{{ data.address }}</td>
-        </tr>
+        @for (data of nzTable.data; track data) {
+          <tr>
+            <td>{{ data.name }}</td>
+            <td>{{ data.age }}</td>
+            <td>{{ data.address }}</td>
+          </tr>
+        }
       </tbody>
     </nz-table>
     <nz-dropdown-menu #menu="nzDropdownMenu">
@@ -39,27 +49,25 @@ interface DataItem {
       </div>
     </nz-dropdown-menu>
   `,
-  styles: [
-    `
-      .search-box {
-        padding: 8px;
-      }
+  styles: `
+    .search-box {
+      padding: 8px;
+    }
 
-      .search-box input {
-        width: 188px;
-        margin-bottom: 8px;
-        display: block;
-      }
+    .search-box input {
+      width: 188px;
+      margin-bottom: 8px;
+      display: block;
+    }
 
-      .search-box button {
-        width: 90px;
-      }
+    .search-box button {
+      width: 90px;
+    }
 
-      .search-button {
-        margin-right: 8px;
-      }
-    `
-  ]
+    .search-button {
+      margin-right: 8px;
+    }
+  `
 })
 export class NzDemoTableCustomFilterPanelComponent {
   searchValue = '';

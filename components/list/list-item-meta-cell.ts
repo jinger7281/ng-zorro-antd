@@ -5,12 +5,14 @@
 
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 
+import { NzAvatarModule } from 'ng-zorro-antd/avatar';
+
 @Component({
   selector: 'nz-list-item-meta-title',
   exportAs: 'nzListItemMetaTitle',
   template: `
     <h4 class="ant-list-item-meta-title">
-      <ng-content></ng-content>
+      <ng-content />
     </h4>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -22,7 +24,7 @@ export class NzListItemMetaTitleComponent {}
   exportAs: 'nzListItemMetaDescription',
   template: `
     <div class="ant-list-item-meta-description">
-      <ng-content></ng-content>
+      <ng-content />
     </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -34,11 +36,15 @@ export class NzListItemMetaDescriptionComponent {}
   exportAs: 'nzListItemMetaAvatar',
   template: `
     <div class="ant-list-item-meta-avatar">
-      <nz-avatar *ngIf="nzSrc" [nzSrc]="nzSrc"></nz-avatar>
-      <ng-content *ngIf="!nzSrc"></ng-content>
+      @if (nzSrc) {
+        <nz-avatar [nzSrc]="nzSrc" />
+      } @else {
+        <ng-content />
+      }
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [NzAvatarModule]
 })
 export class NzListItemMetaAvatarComponent {
   @Input() nzSrc?: string;

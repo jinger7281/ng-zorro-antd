@@ -5,11 +5,12 @@
 
 import { FocusMonitor } from '@angular/cdk/a11y';
 import {
-  AfterViewInit,
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   ElementRef,
   EventEmitter,
+  inject,
   Input,
   OnChanges,
   Output,
@@ -18,7 +19,7 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { COMPOSITION_BUFFER_MODE } from '@angular/forms';
+import { COMPOSITION_BUFFER_MODE, FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'nz-select-search',
@@ -38,11 +39,22 @@ import { COMPOSITION_BUFFER_MODE } from '@angular/forms';
       (compositionstart)="setCompositionState(true)"
       (compositionend)="setCompositionState(false)"
     />
-    <span #mirrorElement *ngIf="mirrorSync" class="ant-select-selection-search-mirror"></span>
+    @if (mirrorSync) {
+      <span #mirrorElement class="ant-select-selection-search-mirror"></span>
+    }
   `,
-  providers: [{ provide: COMPOSITION_BUFFER_MODE, useValue: false }]
+  host: {
+    class: 'ant-select-selection-search',
+    '[style.width.px]': 'mirrorSync ? 0 : null'
+  },
+  providers: [{ provide: COMPOSITION_BUFFER_MODE, useValue: false }],
+  imports: [FormsModule]
 })
-export class NzSelectSearchComponent implements AfterViewInit, OnChanges {
+export class NzSelectSearchComponent implements OnChanges {
+  private readonly elementRef = inject(ElementRef);
+  private readonly renderer = inject(Renderer2);
+  private readonly focusMonitor = inject(FocusMonitor);
+
   @Input() nzId: string | null = null;
   @Input() disabled = false;
   @Input() mirrorSync = false;
@@ -54,6 +66,17 @@ export class NzSelectSearchComponent implements AfterViewInit, OnChanges {
   @Output() readonly isComposingChange = new EventEmitter<boolean>();
   @ViewChild('inputElement', { static: true }) inputElement!: ElementRef;
   @ViewChild('mirrorElement', { static: false }) mirrorElement?: ElementRef;
+
+  constructor() {
+    afterNextRender(() => {
+      if (this.mirrorSync) {
+        this.syncMirrorWidth();
+      }
+      if (this.autofocus) {
+        this.focus();
+      }
+    });
+  }
 
   setCompositionState(isComposing: boolean): void {
     this.isComposingChange.next(isComposing);
@@ -78,7 +101,7 @@ export class NzSelectSearchComponent implements AfterViewInit, OnChanges {
     const hostDOM = this.elementRef.nativeElement;
     const inputDOM = this.inputElement.nativeElement;
     this.renderer.removeStyle(hostDOM, 'width');
-    mirrorDOM.innerHTML = this.renderer.createText(`${inputDOM.value}&nbsp;`);
+    this.renderer.setProperty(mirrorDOM, 'textContent', `${inputDOM.value}\u00a0`);
     this.renderer.setStyle(hostDOM, 'width', `${mirrorDOM.scrollWidth}px`);
   }
 
@@ -88,11 +111,6 @@ export class NzSelectSearchComponent implements AfterViewInit, OnChanges {
 
   blur(): void {
     this.inputElement.nativeElement.blur();
-  }
-
-  constructor(private elementRef: ElementRef, private renderer: Renderer2, private focusMonitor: FocusMonitor) {
-    // TODO: move to host after View Engine deprecation
-    this.elementRef.nativeElement.classList.add('ant-select-selection-search');
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -110,15 +128,6 @@ export class NzSelectSearchComponent implements AfterViewInit, OnChanges {
     // IE11 cannot input value if focused before removing readonly
     if (focusTrigger && focusTrigger.currentValue === true && focusTrigger.previousValue === false) {
       inputDOM.focus();
-    }
-  }
-
-  ngAfterViewInit(): void {
-    if (this.mirrorSync) {
-      this.syncMirrorWidth();
-    }
-    if (this.autofocus) {
-      this.focus();
     }
   }
 }

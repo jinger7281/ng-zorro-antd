@@ -1,32 +1,26 @@
-import { Component, DebugElement, NO_ERRORS_SCHEMA, ViewChild, ViewEncapsulation } from '@angular/core';
-import { ComponentFixture, fakeAsync, flush, TestBed, tick, waitForAsync } from '@angular/core/testing';
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
+
+import { ApplicationRef, Component, DebugElement, provideZoneChangeDetection, ViewChild } from '@angular/core';
+import { ComponentFixture, TestBed, fakeAsync, flush, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 
 import { dispatchFakeEvent } from 'ng-zorro-antd/core/testing';
 
-import { NzI18nModule } from '../i18n/nz-i18n.module';
 import { NzTimePickerPanelComponent } from './time-picker-panel.component';
 
 describe('time-picker-panel', () => {
-  beforeEach(
-    waitForAsync(() => {
-      TestBed.configureTestingModule({
-        imports: [FormsModule, NzI18nModule],
-        schemas: [NO_ERRORS_SCHEMA],
-        declarations: [
-          NzTimePickerPanelComponent,
-          NzTestTimePanelComponent,
-          NzTestTimePanelDisabledComponent,
-          NzTest12HourTimePanelComponent,
-          NzTest12HourTimePanelDisabeledComponent
-        ]
-      });
-      TestBed.compileComponents();
-    })
-  );
+  beforeEach(() => {
+    // todo: use zoneless
+    TestBed.configureTestingModule({
+      providers: [provideZoneChangeDetection()]
+    });
+  });
 
-  describe('basic time-picker-panel', () => {
+  describe('basic', () => {
     let fixture: ComponentFixture<NzTestTimePanelComponent>;
     let testComponent: NzTestTimePanelComponent;
     let panelElement: DebugElement;
@@ -55,13 +49,14 @@ describe('time-picker-panel', () => {
       expect(testComponent.nzTimePickerPanelComponent.minuteEnabled).toBe(true);
       expect(testComponent.nzTimePickerPanelComponent.secondEnabled).toBe(false);
       expect(testComponent.nzTimePickerPanelComponent.enabledColumns).toBe(2);
-      testComponent.format = null;
+      testComponent.format = null!;
       fixture.detectChanges();
       expect(testComponent.nzTimePickerPanelComponent.hourEnabled).toBe(true);
       expect(testComponent.nzTimePickerPanelComponent.minuteEnabled).toBe(true);
       expect(testComponent.nzTimePickerPanelComponent.secondEnabled).toBe(false);
       expect(testComponent.nzTimePickerPanelComponent.enabledColumns).toBe(2);
     });
+
     // it('should default open value work', fakeAsync(() => {
     //   testComponent.opened = true;
     //   fixture.detectChanges();
@@ -84,6 +79,20 @@ describe('time-picker-panel', () => {
     //   expect(listOfSelectedLi[1].innerText).toBe('09');
     //   expect(listOfSelectedLi[2].innerText).toBe('10');
     // }));
+
+    it('should select default open value on list click', fakeAsync(() => {
+      const listOfSelectedLi = panelElement.nativeElement.querySelectorAll('.ant-picker-time-panel-cell-selected');
+      expect(listOfSelectedLi[0].innerText).toBe('10');
+      expect(listOfSelectedLi[1].innerText).toBe('11');
+      expect(listOfSelectedLi[2].innerText).toBe('12');
+      expect(testComponent.value).toBeUndefined();
+      dispatchFakeEvent(listOfSelectedLi[0], 'click');
+      fixture.detectChanges();
+      flush();
+      fixture.detectChanges();
+      expect(testComponent.value).not.toBeUndefined();
+    }));
+
     it('should select scroll work', fakeAsync(() => {
       testComponent.value = new Date(0, 0, 0, 8, 9, 10);
       fixture.detectChanges();
@@ -106,6 +115,7 @@ describe('time-picker-panel', () => {
       expect(listOfSelectedLi[1].innerText).toBe('01');
       expect(listOfSelectedLi[2].innerText).toBe('02');
     }));
+
     it('should step work', () => {
       fixture.detectChanges();
       let listOfSelectContainer = panelElement.nativeElement.querySelectorAll('.ant-picker-time-panel-column');
@@ -146,8 +156,24 @@ describe('time-picker-panel', () => {
       const listOfSelectedLi = panelElement.nativeElement.querySelector('.ant-picker-time-panel-cell-selected');
       expect(listOfSelectedLi.offsetTop).toBe(0);
     }));
+
+    describe('change detection behavior', () => {
+      it('should not run change detection when the timer picker panel is clicked', () => {
+        const appRef = TestBed.inject(ApplicationRef);
+        const event = new MouseEvent('mousedown');
+
+        spyOn(appRef, 'tick');
+        spyOn(event, 'preventDefault').and.callThrough();
+
+        fixture.nativeElement.querySelector('nz-time-picker-panel').dispatchEvent(event);
+
+        expect(appRef.tick).not.toHaveBeenCalled();
+        expect(event.preventDefault).toHaveBeenCalled();
+      });
+    });
   });
-  describe('disabled time-picker-panel', () => {
+
+  describe('disabled', () => {
     let fixture: ComponentFixture<NzTestTimePanelDisabledComponent>;
     let testComponent: NzTestTimePanelDisabledComponent;
     let panelElement: DebugElement;
@@ -203,16 +229,19 @@ describe('time-picker-panel', () => {
       ).toBe('12');
     }));
   });
-  describe('12-hour time-picker-panel', () => {
+
+  describe('12-hour', () => {
     let panelElement: DebugElement;
     let fixture12Hour: ComponentFixture<NzTest12HourTimePanelComponent>;
     let testComponent: NzTest12HourTimePanelComponent;
+
     beforeEach(() => {
       fixture12Hour = TestBed.createComponent(NzTest12HourTimePanelComponent);
       testComponent = fixture12Hour.debugElement.componentInstance;
       fixture12Hour.detectChanges();
       panelElement = fixture12Hour.debugElement.query(By.directive(NzTimePickerPanelComponent));
     });
+
     it('basic 12-hour time-picker-panel', fakeAsync(() => {
       fixture12Hour.detectChanges();
       expect(testComponent.nzTimePickerPanelComponent.enabledColumns).toBe(4);
@@ -222,6 +251,7 @@ describe('time-picker-panel', () => {
       expect(hour12labels[0].innerText).toBe('am');
       expect(hour12labels[1].innerText).toBe('pm');
     }));
+
     it('default value 12-hour time-picker-panel', fakeAsync(() => {
       fixture12Hour.detectChanges();
       tick(1000);
@@ -232,6 +262,7 @@ describe('time-picker-panel', () => {
       expect(listOfSelectedLi[2].innerText).toBe('00');
       expect(listOfSelectedLi[3].innerText).toBe('am');
     }));
+
     it('should scroll work in 12-hour', fakeAsync(() => {
       fixture12Hour.componentInstance.openValue = new Date(0, 0, 0, 5, 6, 7);
       fixture12Hour.componentInstance.nzTimePickerPanelComponent.select12Hours({ index: 1, value: 'pm' });
@@ -252,6 +283,7 @@ describe('time-picker-panel', () => {
       expect(listOfSelectedLi[1].innerText).toBe('07');
       expect(listOfSelectedLi[2].innerText).toBe('08');
     }));
+
     it('select hour and 12-hour in 12-hour-time-picker-panel', fakeAsync(() => {
       fixture12Hour.detectChanges();
       testComponent.nzTimePickerPanelComponent.selectHour({ index: 3, disabled: false });
@@ -266,6 +298,7 @@ describe('time-picker-panel', () => {
       fixture12Hour.detectChanges();
       expect(testComponent.value!.getHours()).toBe(3);
     }));
+
     it('hour step in 12-hour-time-picker-panel', fakeAsync(() => {
       testComponent.hourStep = 2;
       fixture12Hour.detectChanges();
@@ -273,13 +306,14 @@ describe('time-picker-panel', () => {
       expect(listOfHourContainer[0].children.length).toEqual(6);
     }));
   });
-  describe('disabled and format 12-hour time-picker-panel', () => {
+
+  describe('disabled and format 12-hour', () => {
     let panelElement: DebugElement;
-    let fixture12Hour: ComponentFixture<NzTest12HourTimePanelDisabeledComponent>;
-    let testComponent: NzTest12HourTimePanelDisabeledComponent;
+    let fixture12Hour: ComponentFixture<NzTest12HourTimePanelDisabledComponent>;
+    let testComponent: NzTest12HourTimePanelDisabledComponent;
 
     beforeEach(() => {
-      fixture12Hour = TestBed.createComponent(NzTest12HourTimePanelDisabeledComponent);
+      fixture12Hour = TestBed.createComponent(NzTest12HourTimePanelDisabledComponent);
       testComponent = fixture12Hour.debugElement.componentInstance;
       fixture12Hour.detectChanges();
       panelElement = fixture12Hour.debugElement.query(By.directive(NzTimePickerPanelComponent));
@@ -316,12 +350,21 @@ describe('time-picker-panel', () => {
       expect(listHourLi[6].classList).toContain('ant-picker-time-panel-cell-disabled');
       expect(listHourLi[7].classList).toContain('ant-picker-time-panel-cell-disabled');
       expect(listHourLi[8].classList).toContain('ant-picker-time-panel-cell-disabled');
+
+      fixture12Hour.detectChanges();
+      tick(500);
+      flush();
+      listHourLi = panelElement.nativeElement
+        .querySelectorAll('.ant-picker-time-panel-column')[3]
+        .querySelectorAll('li');
+
+      expect(listHourLi.length).not.toBe(0);
     }));
   });
 });
 
 @Component({
-  encapsulation: ViewEncapsulation.None,
+  imports: [NzTimePickerPanelComponent, FormsModule],
   template: `
     <nz-time-picker-panel
       [(ngModel)]="value"
@@ -330,22 +373,21 @@ describe('time-picker-panel', () => {
       [nzSecondStep]="secondStep"
       [nzMinuteStep]="minuteStep"
       [nzHourStep]="hourStep"
-    ></nz-time-picker-panel>
-  `,
-  styleUrls: ['../style/index.less', './style/index.less']
+    />
+  `
 })
 export class NzTestTimePanelComponent {
+  @ViewChild(NzTimePickerPanelComponent, { static: false }) nzTimePickerPanelComponent!: NzTimePickerPanelComponent;
   secondStep = 1;
   minuteStep = 1;
   hourStep = 1;
-  @ViewChild(NzTimePickerPanelComponent, { static: false }) nzTimePickerPanelComponent!: NzTimePickerPanelComponent;
   value?: Date;
   openValue = new Date(0, 0, 0, 10, 11, 12);
-  format: string | null = 'HH:mm:ss';
+  format: string = 'HH:mm:ss';
 }
 
 @Component({
-  encapsulation: ViewEncapsulation.None,
+  imports: [NzTimePickerPanelComponent, FormsModule],
   template: `
     <nz-time-picker-panel
       [(ngModel)]="value"
@@ -359,17 +401,16 @@ export class NzTestTimePanelComponent {
       [nzInDatePicker]="inDatePicker"
       [nzHideDisabledOptions]="hideDisabledOptions"
       [nzHourStep]="hourStep"
-    ></nz-time-picker-panel>
-  `,
-  styleUrls: ['../style/index.less', './style/index.less']
+    />
+  `
 })
 export class NzTestTimePanelDisabledComponent {
+  @ViewChild(NzTimePickerPanelComponent, { static: false }) nzTimePickerPanelComponent!: NzTimePickerPanelComponent;
   inDatePicker = false;
   secondStep = 1;
   minuteStep = 1;
   hourStep = 1;
   hideDisabledOptions = false;
-  @ViewChild(NzTimePickerPanelComponent, { static: false }) nzTimePickerPanelComponent!: NzTimePickerPanelComponent;
   value = new Date(0, 0, 0, 0, 0, 0);
   openValue = new Date(0, 0, 0, 10, 11, 12);
   format = 'HH:mm:ss';
@@ -394,8 +435,9 @@ export class NzTestTimePanelDisabledComponent {
     }
   }
 }
+
 @Component({
-  encapsulation: ViewEncapsulation.None,
+  imports: [NzTimePickerPanelComponent, FormsModule],
   template: `
     <nz-time-picker-panel
       [(ngModel)]="value"
@@ -403,9 +445,8 @@ export class NzTestTimePanelDisabledComponent {
       [nzDefaultOpenValue]="openValue"
       [nzHourStep]="hourStep"
       [format]="format"
-    ></nz-time-picker-panel>
-  `,
-  styleUrls: ['../style/index.less', './style/index.less']
+    />
+  `
 })
 export class NzTest12HourTimePanelComponent {
   @ViewChild(NzTimePickerPanelComponent, { static: false }) nzTimePickerPanelComponent!: NzTimePickerPanelComponent;
@@ -414,8 +455,9 @@ export class NzTest12HourTimePanelComponent {
   value?: Date;
   openValue = new Date(0, 0, 0, 0, 0, 0);
 }
+
 @Component({
-  encapsulation: ViewEncapsulation.None,
+  imports: [NzTimePickerPanelComponent, FormsModule],
   template: `
     <nz-time-picker-panel
       [format]="format"
@@ -424,15 +466,17 @@ export class NzTest12HourTimePanelComponent {
       [nzDisabledHours]="disabledHours"
       [nzDisabledMinutes]="disabledMinutes"
       [nzDisabledSeconds]="disabledSeconds"
-    ></nz-time-picker-panel>
-  `,
-  styleUrls: ['../style/index.less', './style/index.less']
+      [nzHideDisabledOptions]="false"
+    />
+  `
 })
-export class NzTest12HourTimePanelDisabeledComponent {
+export class NzTest12HourTimePanelDisabledComponent {
   @ViewChild(NzTimePickerPanelComponent, { static: false }) nzTimePickerPanelComponent!: NzTimePickerPanelComponent;
   format = 'hh:mm:ss a';
   value = new Date(0, 0, 0, 1, 1, 1);
+
   disabledHours = (): number[] => [];
+
   disabledMinutes(hour: number): number[] {
     if (hour === 4) {
       return [20, 21, 22, 23, 24, 25];
@@ -440,6 +484,7 @@ export class NzTest12HourTimePanelDisabeledComponent {
       return [];
     }
   }
+
   disabledSeconds(hour: number, minute: number): number[] {
     if (hour === 5 && minute === 1) {
       return [20, 21, 22, 23, 24, 25];

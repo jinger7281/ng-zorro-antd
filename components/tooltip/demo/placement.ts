@@ -1,7 +1,11 @@
 import { Component } from '@angular/core';
 
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+
 @Component({
   selector: 'nz-demo-tooltip-placement',
+  imports: [NzButtonModule, NzTooltipModule],
   template: `
     <div style="margin-left:60px;">
       <button nzTooltipTitle="prompt text" [nzTooltipPlacement]="['topLeft', 'leftTop']" nz-button nz-tooltip>
@@ -26,16 +30,14 @@ import { Component } from '@angular/core';
       <button nzTooltipTitle="prompt text" nzTooltipPlacement="bottomRight" nz-button nz-tooltip>BR</button>
     </div>
   `,
-  styles: [
-    `
-      button {
-        width: 70px;
-        text-align: center;
-        padding: 0;
-        margin-right: 8px;
-        margin-bottom: 8px;
-      }
-    `
-  ]
+  styles: `
+    button {
+      width: 70px;
+      text-align: center;
+      padding: 0;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+  `
 })
 export class NzDemoTooltipPlacementComponent {}

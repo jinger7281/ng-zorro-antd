@@ -1,7 +1,12 @@
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
+
 import { OverlayContainer } from '@angular/cdk/overlay';
-import { Component, TemplateRef, ViewChild } from '@angular/core';
-import { ComponentFixture, fakeAsync, flush, inject, TestBed, waitForAsync } from '@angular/core/testing';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { Component, provideZoneChangeDetection, TemplateRef, ViewChild } from '@angular/core';
+import { ComponentFixture, fakeAsync, flush, inject, TestBed } from '@angular/core/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
 
@@ -17,21 +22,12 @@ describe('modal title directive', () => {
   let testComponent: TestDirectiveTitleComponent;
   let modalService: NzModalService;
 
-  beforeEach(
-    waitForAsync(() => {
-      TestBed.configureTestingModule({
-        imports: [NzModalModule, NoopAnimationsModule],
-        declarations: [
-          TestDirectiveTitleComponent,
-          TestDirectiveTitleInServiceComponent,
-          TestDirectiveTitleWithInitOpenedComponent
-        ],
-        providers: [NzModalService]
-      });
-
-      TestBed.compileComponents();
-    })
-  );
+  beforeEach(() => {
+    // todo: use zoneless
+    TestBed.configureTestingModule({
+      providers: [NzModalService, provideNoopAnimations(), provideZoneChangeDetection()]
+    });
+  });
 
   beforeEach(() => {
     fixture = TestBed.createComponent(TestDirectiveTitleComponent);
@@ -83,6 +79,7 @@ describe('modal title directive', () => {
 });
 
 @Component({
+  imports: [NzModalModule],
   template: `
     <nz-modal [(nzVisible)]="isVisible" (nzOnCancel)="handleCancel()">
       <div>
@@ -97,8 +94,6 @@ class TestDirectiveTitleComponent {
   @ViewChild(NzModalComponent) nzModalComponent!: NzModalComponent;
   @ViewChild(NzModalTitleDirective, { static: true, read: TemplateRef }) nzModalTitleDirective!: TemplateRef<NzSafeAny>;
 
-  constructor() {}
-
   handleCancel(): void {
     this.isVisible = false;
   }
@@ -109,6 +104,7 @@ class TestDirectiveTitleComponent {
 }
 
 @Component({
+  imports: [NzModalModule],
   template: `
     <nz-modal [(nzVisible)]="isVisible">
       <div>
@@ -122,12 +118,11 @@ class TestDirectiveTitleWithInitOpenedComponent {
   isVisible = true;
   @ViewChild(NzModalComponent) nzModalComponent!: NzModalComponent;
   @ViewChild(NzModalTitleDirective, { static: true, read: TemplateRef }) nzModalTitleDirective!: TemplateRef<NzSafeAny>;
-
-  constructor() {}
 }
 
 @Component({
-  template: ` <div *nzModalTitle>Custom Modal Title</div> `
+  imports: [NzModalModule],
+  template: `<div *nzModalTitle>Custom Modal Title</div>`
 })
 class TestDirectiveTitleInServiceComponent {
   @ViewChild(NzModalTitleDirective, { static: true, read: TemplateRef }) NzModalTitleDirective!: TemplateRef<NzSafeAny>;

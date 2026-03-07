@@ -27,6 +27,10 @@ export class NzTreeBaseService {
   checkedNodeList: NzTreeNode[] = [];
   halfCheckedNodeList: NzTreeNode[] = [];
   matchedNodeList: NzTreeNode[] = [];
+  /**
+   * handle to post process a tree node when it's instantiating, note that its children haven't been initiated yet
+   */
+  treeNodePostProcessor?: (node: NzTreeNode) => void;
 
   /**
    * reset tree nodes will clear default node list
@@ -53,6 +57,26 @@ export class NzTreeBaseService {
    */
   getSelectedNodeList(): NzTreeNode[] {
     return this.conductNodeState('select');
+  }
+
+  /**
+   * get checked node keys
+   */
+  getCheckedNodeKeys(): NzTreeNodeKey[] {
+    const keys: NzTreeNodeKey[] = [];
+    const checkedNodes = this.getCheckedNodeList();
+
+    const calc = (nodes: NzTreeNode[]): void => {
+      nodes.forEach(node => {
+        keys.push(node.key);
+        if (node.children.length < 1) return;
+        calc(node.children);
+      });
+    };
+
+    calc(checkedNodes);
+
+    return keys;
   }
 
   /**
@@ -163,7 +187,7 @@ export class NzTreeBaseService {
       case 'match':
         resultNodesList = this.matchedNodeList;
         break;
-      case 'check':
+      case 'check': {
         resultNodesList = this.checkedNodeList;
         const isIgnore = (node: NzTreeNode): boolean => {
           const parentNode = node.getParentNode();
@@ -181,6 +205,7 @@ export class NzTreeBaseService {
           resultNodesList = this.checkedNodeList.filter(n => !isIgnore(n));
         }
         break;
+      }
       case 'halfCheck':
         if (!this.isCheckStrictly) {
           resultNodesList = this.halfCheckedNodeList;
@@ -283,7 +308,7 @@ export class NzTreeBaseService {
    */
   afterRemove(nodes: NzTreeNode[]): void {
     // to reset selectedNodeList & expandedNodeList
-    const loopNode = (node: NzTreeNode) => {
+    const loopNode = (node: NzTreeNode): void => {
       // remove selected node
       this.selectedNodeList = this.selectedNodeList.filter(n => n.key !== node.key);
       // remove expanded node
@@ -367,7 +392,7 @@ export class NzTreeBaseService {
         this.resetNodeLevel(targetNode);
         break;
       case -1:
-      case 1:
+      case 1: {
         const tIndex = dragPos === 1 ? 1 : 0;
         if (targetParent) {
           targetParent.addChildren([this.selectedNode], targetParent.children.indexOf(targetNode) + tIndex);
@@ -383,6 +408,7 @@ export class NzTreeBaseService {
           this.resetNodeLevel(this.rootNodes[targetIndex]);
         }
         break;
+      }
     }
     // flush all nodes
     this.rootNodes.forEach(child => {
@@ -421,12 +447,13 @@ export class NzTreeBaseService {
         Object.assign(emitStructure, { nodes: this.selectedNodeList });
         Object.assign(emitStructure, { keys: this.selectedNodeList.map(n => n.key) });
         break;
-      case 'check':
+      case 'check': {
         const checkedNodeList = this.getCheckedNodeList();
         Object.assign(emitStructure, { checkedKeys: checkedNodeList });
         Object.assign(emitStructure, { nodes: checkedNodeList });
         Object.assign(emitStructure, { keys: checkedNodeList.map(n => n.key) });
         break;
+      }
       case 'search':
         Object.assign(emitStructure, { matchedKeys: this.getMatchedNodeList() });
         Object.assign(emitStructure, { nodes: this.getMatchedNodeList() });
@@ -458,7 +485,7 @@ export class NzTreeBaseService {
   conductCheck(keys: NzTreeNodeKey[] | null, checkStrictly: boolean): void {
     this.checkedNodeList = [];
     this.halfCheckedNodeList = [];
-    const calc = (nodes: NzTreeNode[]) => {
+    const calc = (nodes: NzTreeNode[]): void => {
       nodes.forEach(node => {
         if (keys === null) {
           // render tree if no default checked keys found
@@ -484,7 +511,7 @@ export class NzTreeBaseService {
   conductExpandedKeys(keys: NzTreeNodeKey[] | true = []): void {
     const expandedKeySet = new Set(keys === true ? [] : keys);
     this.expandedNodeList = [];
-    const calc = (nodes: NzTreeNode[]) => {
+    const calc = (nodes: NzTreeNode[]): void => {
       nodes.forEach(node => {
         node.setExpanded(keys === true || expandedKeySet.has(node.key) || node.isExpanded === true);
         if (node.isExpanded) {

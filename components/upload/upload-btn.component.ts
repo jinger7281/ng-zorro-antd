@@ -5,12 +5,14 @@
 
 import { ENTER } from '@angular/cdk/keycodes';
 import { HttpClient, HttpEvent, HttpEventType, HttpHeaders, HttpRequest, HttpResponse } from '@angular/common/http';
-import { Component, ElementRef, Input, OnDestroy, Optional, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, DestroyRef, ElementRef, inject, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, of, Subscription } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { filter, map, switchMap, tap } from 'rxjs/operators';
 
 import { warn } from 'ng-zorro-antd/core/logger';
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
+import { fromEventOutsideAngular } from 'ng-zorro-antd/core/util';
 
 import { NzUploadFile, NzUploadXHRArgs, ZipButtonOptions } from './interface';
 
@@ -19,36 +21,26 @@ import { NzUploadFile, NzUploadXHRArgs, ZipButtonOptions } from './interface';
   exportAs: 'nzUploadBtn',
   templateUrl: './upload-btn.component.html',
   host: {
+    class: 'ant-upload',
     '[attr.tabindex]': '"0"',
     '[attr.role]': '"button"',
     '[class.ant-upload-disabled]': 'options.disabled',
-    '(click)': 'onClick()',
-    '(keydown)': 'onKeyDown($event)',
     '(drop)': 'onFileDrop($event)',
     '(dragover)': 'onFileDrop($event)'
   },
-  preserveWhitespaces: false,
   encapsulation: ViewEncapsulation.None
 })
-export class NzUploadBtnComponent implements OnDestroy {
-  reqs: { [key: string]: Subscription } = {};
-  private destroy = false;
-  @ViewChild('file', { static: false }) file!: ElementRef;
+export class NzUploadBtnComponent implements OnInit {
+  reqs: Record<string, Subscription> = {};
+  private destroyed = false;
+  @ViewChild('file', { static: true }) file!: ElementRef<HTMLInputElement>;
   @Input() options!: ZipButtonOptions;
+
   onClick(): void {
     if (this.options.disabled || !this.options.openFileDialogOnClick) {
       return;
     }
-    (this.file.nativeElement as HTMLInputElement).click();
-  }
-
-  onKeyDown(e: KeyboardEvent): void {
-    if (this.options.disabled) {
-      return;
-    }
-    if (e.key === 'Enter' || e.keyCode === ENTER) {
-      this.onClick();
-    }
+    this.file.nativeElement.click();
   }
 
   // skip safari bug
@@ -81,7 +73,7 @@ export class NzUploadBtnComponent implements OnDestroy {
   }
 
   private traverseFileTree(files: DataTransferItemList): void {
-    const _traverseFileTree = (item: NzSafeAny, path: string) => {
+    const _traverseFileTree = (item: NzSafeAny, path: string): void => {
       if (item.isFile) {
         item.file((file: File) => {
           if (this.attrAccept(file, this.options.accept)) {
@@ -120,7 +112,7 @@ export class NzUploadBtnComponent implements OnDestroy {
               .indexOf(validType.toLowerCase(), fileName.toLowerCase().length - validType.toLowerCase().length) !== -1
           );
         } else if (/\/\*$/.test(validType)) {
-          // This is something like a image/* mime type
+          // This is something like an image/* mime type
           return baseMimeType === validType.replace(/\/.*$/, '');
         }
         return mimeType === validType;
@@ -148,17 +140,17 @@ export class NzUploadBtnComponent implements OnDestroy {
         );
       });
     }
-    filters$.subscribe(
-      list => {
+    filters$.subscribe({
+      next: list => {
         list.forEach((file: NzUploadFile) => {
           this.attachUid(file);
           this.upload(file, list);
         });
       },
-      e => {
+      error: e => {
         warn(`Unhandled upload filter error`, e);
       }
-    );
+    });
   }
 
   private upload(file: NzUploadFile, fileList: NzUploadFile[]): void {
@@ -166,31 +158,40 @@ export class NzUploadBtnComponent implements OnDestroy {
       return this.post(file);
     }
     const before = this.options.beforeUpload(file, fileList);
+    const successBeforeLoadHook = (processedFile: NzUploadFile | boolean | Blob | File): void => {
+      const processedFileType = Object.prototype.toString.call(processedFile);
+      if (
+        typeof processedFile !== 'boolean' &&
+        (processedFileType === '[object File]' || processedFileType === '[object Blob]')
+      ) {
+        (processedFile as NzUploadFile).uid = file.uid; // we are sure that the file has already an uid, now nzBeforeUpload is used to transform the file, the transform file needs to have the same uid as the original file
+        this.post(file, processedFile as NzUploadFile);
+      } else if (processedFile) {
+        this.post(file);
+      }
+    };
+    const errorBeforeLoadHook = (error: NzSafeAny): void => {
+      warn(`Unhandled upload beforeUpload error`, error);
+    };
+
     if (before instanceof Observable) {
-      before.subscribe(
-        (processedFile: NzUploadFile) => {
-          const processedFileType = Object.prototype.toString.call(processedFile);
-          if (processedFileType === '[object File]' || processedFileType === '[object Blob]') {
-            this.attachUid(processedFile);
-            this.post(processedFile);
-          } else if (typeof processedFile === 'boolean' && processedFile !== false) {
-            this.post(file);
-          }
-        },
-        e => {
-          warn(`Unhandled upload beforeUpload error`, e);
-        }
-      );
-    } else if (before !== false) {
+      before.subscribe({
+        next: successBeforeLoadHook,
+        error: errorBeforeLoadHook
+      });
+    } else if (before instanceof Promise) {
+      before.then(successBeforeLoadHook).catch(errorBeforeLoadHook);
+    } else if (before) {
       return this.post(file);
     }
   }
 
-  private post(file: NzUploadFile): void {
-    if (this.destroy) {
+  private post(file: NzUploadFile, processedFile?: string | Blob | File | NzUploadFile): void {
+    if (this.destroyed) {
       return;
     }
-    let process$: Observable<string | Blob | File | NzUploadFile> = of(file);
+    let process$: Observable<string | Blob | File | NzUploadFile> = of(processedFile || file);
+    let transformedFile: string | Blob | File | NzUploadFile | undefined;
     const opt = this.options;
     const { uid } = file;
     const { action, data, headers, transformFile } = opt;
@@ -236,18 +237,30 @@ export class NzUploadBtnComponent implements OnDestroy {
     if (typeof transformFile === 'function') {
       const transformResult = transformFile(file);
       process$ = process$.pipe(
-        switchMap(() => (transformResult instanceof Observable ? transformResult : of(transformResult)))
+        switchMap(() => (transformResult instanceof Observable ? transformResult : of(transformResult))),
+        tap(newFile => (transformedFile = newFile))
       );
     }
 
+    /**
+     * TODO
+     * All this part of code needs to be removed in v22.0.0 when we will remove the `nzTransformFile` hook
+     */
     if (typeof data === 'function') {
       const dataResult = (data as (file: NzUploadFile) => {} | Observable<{}>)(file);
       if (dataResult instanceof Observable) {
         process$ = process$.pipe(
+          /**
+           * this is a little bit tricky but here is the explanation:
+           * Potentially, people can use the `beforeUpload` hook to transform the file, and also `nzTransformFile` hook to transform the file,
+           * if beforeUpload hook transform the file, so nzTransformFile hook must not be called, otherwise the file will be transformed twice
+           * Normally this can not happen, but it is possible until we remove the `nzTransformFile` hook
+           */
+          filter(() => !processedFile),
           switchMap(() => dataResult),
           map(res => {
             args.data = res;
-            return file;
+            return transformedFile ?? file;
           })
         );
       } else {
@@ -262,7 +275,7 @@ export class NzUploadBtnComponent implements OnDestroy {
           switchMap(() => headersResult),
           map(res => {
             args.headers = res;
-            return file;
+            return transformedFile ?? file;
           })
         );
       } else {
@@ -305,8 +318,8 @@ export class NzUploadBtnComponent implements OnDestroy {
       withCredentials: args.withCredentials,
       headers: new HttpHeaders(args.headers)
     });
-    return this.http.request(req).subscribe(
-      (event: HttpEvent<NzSafeAny>) => {
+    return this.http!.request(req).subscribe({
+      next: (event: HttpEvent<NzSafeAny>) => {
         if (event.type === HttpEventType.UploadProgress) {
           if (event.total! > 0) {
             (event as NzSafeAny).percent = (event.loaded / event.total!) * 100;
@@ -316,11 +329,11 @@ export class NzUploadBtnComponent implements OnDestroy {
           args.onSuccess!(event.body, args.file, event);
         }
       },
-      err => {
+      error: err => {
         this.abort(args.file);
         args.onError!(err, args.file);
       }
-    );
+    });
   }
 
   private clean(uid: string): void {
@@ -339,17 +352,38 @@ export class NzUploadBtnComponent implements OnDestroy {
     }
   }
 
-  constructor(@Optional() private http: HttpClient, private elementRef: ElementRef) {
-    // TODO: move to host after View Engine deprecation
-    this.elementRef.nativeElement.classList.add('ant-upload');
+  private http = inject(HttpClient, { optional: true });
+  private elementRef = inject(ElementRef);
+  private destroyRef = inject(DestroyRef);
 
-    if (!http) {
-      throw new Error(`Not found 'HttpClient', You can import 'HttpClientModule' in your root module.`);
+  constructor() {
+    if (!this.http) {
+      throw new Error(
+        `Not found 'HttpClient', You can configure 'HttpClient' with 'provideHttpClient()' in your root module.`
+      );
     }
+    this.destroyRef.onDestroy(() => {
+      this.destroyed = true;
+      this.abort();
+    });
   }
 
-  ngOnDestroy(): void {
-    this.destroy = true;
-    this.abort();
+  ngOnInit(): void {
+    // Caretaker note: `input[type=file].click()` will open a native OS file picker,
+    // it doesn't require Angular to run `ApplicationRef.tick()`.
+    fromEventOutsideAngular(this.elementRef.nativeElement, 'click')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.onClick());
+
+    fromEventOutsideAngular<KeyboardEvent>(this.elementRef.nativeElement, 'keydown')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(event => {
+        if (this.options.disabled) {
+          return;
+        }
+        if (event.key === 'Enter' || event.keyCode === ENTER) {
+          this.onClick();
+        }
+      });
   }
 }

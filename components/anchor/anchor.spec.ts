@@ -1,11 +1,20 @@
-/* eslint-disable */
-// eslint-disable
-import { fakeAsync, tick, TestBed, ComponentFixture } from '@angular/core/testing';
-import { Component, DebugElement, ViewChild } from '@angular/core';
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
+
+import { Platform } from '@angular/cdk/platform';
+import { Component, DebugElement, DOCUMENT, ElementRef, ViewChild } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+
 import { NzScrollService } from 'ng-zorro-antd/core/services';
-import { NzAnchorModule } from './anchor.module';
+import { sleep, updateNonSignalsInput } from 'ng-zorro-antd/core/testing';
+import { NzDirectionVHType, NzSafeAny } from 'ng-zorro-antd/core/types';
+
 import { NzAnchorComponent } from './anchor.component';
+import { NzAnchorModule } from './anchor.module';
 
 const throttleTime = 51;
 
@@ -15,23 +24,27 @@ describe('anchor', () => {
   let context: TestComponent;
   let page: PageObject;
   let srv: NzScrollService;
-  beforeEach(() => {
+
+  beforeEach(async () => {
     TestBed.configureTestingModule({
-      imports: [NzAnchorModule],
-      declarations: [TestComponent]
+      providers: [provideNoopAnimations()]
     });
     fixture = TestBed.createComponent(TestComponent);
     dl = fixture.debugElement;
     context = fixture.componentInstance;
-    fixture.detectChanges();
+    fixture.autoDetectChanges();
     page = new PageObject();
-    spyOn(context, '_scroll');
     srv = TestBed.inject(NzScrollService);
+    await fixture.whenStable();
+    await sleep(100);
+    spyOn(context, '_scroll');
+    spyOn(context, '_change');
   });
-  afterEach(() => context.comp.ngOnDestroy());
+
+  afterEach(() => fixture.destroy());
 
   describe('[default]', () => {
-    it(`should scolling to target via click a link`, () => {
+    it(`should scrolling to target via click a link`, () => {
       spyOn(srv, 'scrollTo').and.callFake((_containerEl, _targetTopValue = 0, options = {}) => {
         if (options.callback) {
           options.callback();
@@ -42,38 +55,40 @@ describe('anchor', () => {
       expect(context._scroll).toHaveBeenCalled();
     });
 
-    it('should hava remove listen when the component is destroyed', () => {
-      expect(context.comp['destroy$']!.isStopped).toBeFalsy();
-      context.comp.ngOnDestroy();
-      fixture.detectChanges();
-      expect(context.comp['destroy$']!.isStopped).toBeTruthy();
-    });
-
-    it('should actived when scrolling to the anchor', (done: () => void) => {
+    it('should be activated when scrolling to the anchor', async () => {
       expect(context._scroll).not.toHaveBeenCalled();
       page.scrollTo();
-      setTimeout(() => {
-        const inkNode = page.getEl('.ant-anchor-ink-ball');
-        expect(+inkNode.style.top!.replace('px', '')).toBeGreaterThan(0);
-        expect(context._scroll).toHaveBeenCalled();
-        done();
-      }, throttleTime);
+      await sleep(throttleTime);
+      const inkNode = page.getEl('.ant-anchor-ink-ball');
+      expect(+inkNode.style.top!.replace('px', '')).toBeGreaterThan(0);
+      expect(context._scroll).toHaveBeenCalled();
     });
 
-    it('should clean actived when leave all anchor', fakeAsync(() => {
-      spyOn(context.comp, 'clearActive' as any);
+    it('should be activated when scrolling to the anchor - horizontal', async () => {
+      context.nzDirection = 'horizontal';
+      await updateNonSignalsInput(fixture);
+      expect(context._scroll).not.toHaveBeenCalled();
       page.scrollTo();
-      tick(throttleTime);
+      await sleep(throttleTime);
+      const inkNode = page.getEl('.ant-anchor-ink-ball');
+      expect(+inkNode.style.left!.replace('px', '')).not.toBeNull();
+      expect(context._scroll).toHaveBeenCalled();
+    });
+
+    it('should clean activated when leaving all anchor', async () => {
+      spyOn(context.comp, 'clearActive' as NzSafeAny);
+      page.scrollTo();
+      await sleep(throttleTime);
       fixture.detectChanges();
       expect(context.comp['clearActive']).not.toHaveBeenCalled();
       window.scrollTo(0, 0);
       window.dispatchEvent(new Event('scroll'));
-      tick(throttleTime);
+      await sleep(throttleTime);
       fixture.detectChanges();
       expect(context.comp['clearActive']!).toHaveBeenCalled();
-    }));
+    });
 
-    it(`won't scolling when is not exists link`, () => {
+    it(`won't scrolling when is not exists link`, () => {
       spyOn(srv, 'getScroll');
       expect(context._scroll).not.toHaveBeenCalled();
       expect(srv.getScroll).not.toHaveBeenCalled();
@@ -81,7 +96,7 @@ describe('anchor', () => {
       expect(srv.getScroll).not.toHaveBeenCalled();
     });
 
-    it(`won't scolling when is invalid link`, () => {
+    it(`won't scrolling when is invalid link`, () => {
       spyOn(srv, 'getScroll');
       expect(context._scroll).not.toHaveBeenCalled();
       expect(srv.getScroll).not.toHaveBeenCalled();
@@ -98,13 +113,11 @@ describe('anchor', () => {
       expect(srv.getScroll).not.toHaveBeenCalled();
     });
 
-    it(`should priorities most recently`, (done: () => void) => {
+    it(`should priorities most recently`, async () => {
       expect(context._scroll).not.toHaveBeenCalled();
       page.scrollTo('#parallel1');
-      setTimeout(() => {
-        expect(context._scroll).toHaveBeenCalled();
-        done();
-      }, throttleTime);
+      await sleep(throttleTime);
+      expect(context._scroll).toHaveBeenCalled();
     });
   });
 
@@ -114,11 +127,11 @@ describe('anchor', () => {
         const linkList = dl.queryAll(By.css('nz-affix'));
         expect(linkList.length).toBe(1);
       });
-      it(`is [false]`, () => {
+      it(`is [false]`, async () => {
         let linkList = dl.queryAll(By.css('nz-affix'));
         expect(linkList.length).toBe(1);
         context.nzAffix = false;
-        fixture.detectChanges();
+        await updateNonSignalsInput(fixture);
         linkList = dl.queryAll(By.css('nz-affix'));
         expect(linkList.length).toBe(0);
       });
@@ -131,41 +144,75 @@ describe('anchor', () => {
       });
     });
 
+    describe('[nzCurrentAnchor]', () => {
+      it('customize the anchor highlight', async () => {
+        context.nzCurrentAnchor = '#basic';
+        await updateNonSignalsInput(fixture);
+        const linkList = dl.queryAll(By.css('.ant-anchor-link'));
+        expect(linkList.length).toBeGreaterThan(0);
+        const activeLink = linkList.find(n => (n.nativeElement as HTMLDivElement).getAttribute('nzhref') === '#basic')!;
+        expect(activeLink).toBeTruthy();
+        expect((activeLink.nativeElement as HTMLDivElement).classList).toContain('ant-anchor-link-active');
+      });
+    });
+
     describe('[nzShowInkInFixed]', () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         context.nzAffix = false;
-        fixture.detectChanges();
+        await updateNonSignalsInput(fixture);
       });
-      it('should be show ink when [false]', () => {
+      it('should be show ink when [false]', async () => {
         context.nzShowInkInFixed = false;
-        fixture.detectChanges();
-        scrollTo();
-        expect(dl.query(By.css('.fixed')) == null).toBe(false);
+        await updateNonSignalsInput(fixture);
+        page.scrollTo();
+        expect(dl.query(By.css('.ant-anchor-fixed')) == null).toBe(false);
       });
-      it('should be hide ink when [true]', () => {
+      it('should be hide ink when [true]', async () => {
         context.nzShowInkInFixed = true;
-        fixture.detectChanges();
-        scrollTo();
-        expect(dl.query(By.css('.fixed')) == null).toBe(true);
+        await updateNonSignalsInput(fixture);
+        page.scrollTo();
+        expect(dl.query(By.css('.ant-anchor-fixed')) == null).toBe(true);
       });
     });
 
     describe('[nzContainer]', () => {
-      it('with window', () => {
+      it('with window', async () => {
         spyOn(window, 'addEventListener');
         context.nzContainer = window;
-        fixture.detectChanges();
+        await updateNonSignalsInput(fixture);
         expect(window.addEventListener).toHaveBeenCalled();
       });
-      it('with string', () => {
+      it('with string', async () => {
         spyOn(context, '_click');
         const el = document.querySelector('#target')!;
         spyOn(el, 'addEventListener');
         context.nzContainer = '#target';
-        fixture.detectChanges();
+        await updateNonSignalsInput(fixture);
         expect(el.addEventListener).toHaveBeenCalled();
         page.to('#basic-target');
         expect(context._click).toHaveBeenCalled();
+      });
+    });
+
+    describe('(nzChange)', () => {
+      it('should emit nzChange when click a link', async () => {
+        spyOn(srv, 'scrollTo').and.callFake((_containerEl, _targetTopValue = 0, options = {}) => {
+          if (options.callback) {
+            options.callback();
+          }
+        });
+        expect(context._change).not.toHaveBeenCalled();
+        page.to('#basic-target');
+        expect(context._change).toHaveBeenCalled();
+      });
+      it('should emit nzChange when scrolling to the anchor', async () => {
+        spyOn(context, '_change');
+        expect(context._change).not.toHaveBeenCalled();
+        page.scrollTo();
+        await sleep(throttleTime);
+        const inkNode = page.getEl('.ant-anchor-ink-ball');
+        expect(+inkNode.style.top!.replace('px', '')).toBeGreaterThan(0);
+        expect(context._change).toHaveBeenCalled();
       });
     });
 
@@ -189,20 +236,32 @@ describe('anchor', () => {
     });
   });
 
+  describe('direction', () => {
+    it(`should have vertical direction by default`, () => {
+      const wrapperEl = dl.query(By.css('.ant-anchor-wrapper'));
+      expect(wrapperEl.nativeElement.classList).not.toContain('ant-anchor-wrapper-horizontal');
+    });
+
+    it(`should have correct class name in horizontal mode`, async () => {
+      context.nzDirection = 'horizontal';
+      await updateNonSignalsInput(fixture);
+      const wrapperEl = dl.query(By.css('.ant-anchor-wrapper'));
+      expect(wrapperEl.nativeElement.classList).toContain('ant-anchor-wrapper-horizontal');
+    });
+  });
+
   describe('**boundary**', () => {
-    it('#getOffsetTop', (done: () => void) => {
+    it('#getOffsetTop', async () => {
       const el1 = document.getElementById('何时使用')!;
-      spyOn(el1, 'getClientRects').and.returnValue([] as any);
+      spyOn(el1, 'getClientRects').and.returnValue([] as NzSafeAny);
       const el2 = document.getElementById('parallel1')!;
       spyOn(el2, 'getBoundingClientRect').and.returnValue({
         top: 0
-      } as any);
+      } as NzSafeAny);
       expect(context._scroll).not.toHaveBeenCalled();
       page.scrollTo();
-      setTimeout(() => {
-        expect(context._scroll).toHaveBeenCalled();
-        done();
-      }, throttleTime);
+      await sleep(throttleTime);
+      expect(context._scroll).toHaveBeenCalled();
     });
   });
 
@@ -227,37 +286,42 @@ describe('anchor', () => {
 });
 
 @Component({
+  imports: [NzAnchorModule],
   template: `
     <nz-anchor
       [nzAffix]="nzAffix"
       [nzBounds]="nzBounds"
       [nzShowInkInFixed]="nzShowInkInFixed"
       [nzOffsetTop]="nzOffsetTop"
+      [nzTargetOffset]="nzTargetOffset"
       [nzContainer]="nzContainer"
-      (nzClick)="_click($event)"
-      (nzScroll)="_scroll($event)"
+      [nzCurrentAnchor]="nzCurrentAnchor"
+      [nzDirection]="nzDirection"
+      (nzClick)="_click()"
+      (nzScroll)="_scroll()"
+      (nzChange)="_change()"
     >
-      <nz-link nzHref="#何时使用" nzTitle="何时使用"></nz-link>
-      <nz-link nzHref="#basic" nzTitle="Basic demo"></nz-link>
+      <nz-link nzHref="#何时使用" nzTitle="何时使用" />
+      <nz-link nzHref="#basic" nzTitle="Basic demo" />
       <nz-link nzHref="#API-AnchorLink">
         <ng-template #nzTemplate>
           <span class="nzTemplate-title">tpl</span>
         </ng-template>
       </nz-link>
       <nz-link nzHref="#API" nzTitle="API">
-        <nz-link nzHref="#API-Anchor" nzTitle="nz-anchor"></nz-link>
+        <nz-link nzHref="#API-Anchor" nzTitle="nz-anchor" />
         <nz-link nzHref="#API-AnchorLink" [nzTitle]="title">
           <ng-template #title>
             <span class="nzTitle-title">tpl-title</span>
           </ng-template>
         </nz-link>
       </nz-link>
-      <nz-link nzHref="#invalid" nzTitle="invalid"></nz-link>
-      <nz-link nzHref="invalidLink" nzTitle="invalidLink"></nz-link>
-      <nz-link nzHref="http://www.example.com/#id" nzTitle="complete" class="mock-complete"></nz-link>
-      <nz-link nzHref="#parallel1" nzTitle="parallel1"></nz-link>
-      <nz-link nzHref="#parallel2" nzTitle="parallel2"></nz-link>
-      <nz-link nzHref="#basic-target" nzTitle="basic-target"></nz-link>
+      <nz-link nzHref="#invalid" nzTitle="invalid" />
+      <nz-link nzHref="invalidLink" nzTitle="invalidLink" />
+      <nz-link nzHref="http://www.example.com/#id" nzTitle="complete" class="mock-complete" />
+      <nz-link nzHref="#parallel1" nzTitle="parallel1" />
+      <nz-link nzHref="#parallel2" nzTitle="parallel2" />
+      <nz-link nzHref="#basic-target" nzTitle="basic-target" />
     </nz-anchor>
     <h2 id="何时使用"></h2>
     <div style="height: 1000px"></div>
@@ -281,15 +345,88 @@ describe('anchor', () => {
       <h2 id="basic-target"></h2>
     </div>
   `,
-  styleUrls: ['./style/patch.less']
+  styles: `
+    @import '../style/testing.less';
+    @import './style/patch.less';
+  `
 })
 export class TestComponent {
   @ViewChild(NzAnchorComponent, { static: false }) comp!: NzAnchorComponent;
   nzAffix = true;
   nzBounds = 5;
   nzOffsetTop = 0;
+  nzTargetOffset?: number;
   nzShowInkInFixed = false;
-  nzContainer: any = null;
-  _click() {}
-  _scroll() {}
+  nzContainer: NzSafeAny = null;
+  nzCurrentAnchor?: string;
+  nzDirection: NzDirectionVHType = 'vertical';
+  _click(): void {}
+  _change(): void {}
+  _scroll(): void {}
 }
+
+describe('NzAnchor', () => {
+  let component: NzAnchorComponent;
+  let fixture: ComponentFixture<NzAnchorComponent>;
+  let mockPlatform: Platform;
+  let scrollService: NzScrollService;
+  let mockDocument: Document;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        NzAnchorComponent,
+        { provide: DOCUMENT, useValue: document },
+        NzScrollService,
+        { provide: ElementRef, useValue: new ElementRef(document.createElement('div')) }
+      ]
+    });
+
+    fixture = TestBed.createComponent(NzAnchorComponent);
+    component = fixture.componentInstance;
+    mockPlatform = TestBed.inject(Platform);
+    scrollService = TestBed.inject(NzScrollService);
+    mockDocument = TestBed.inject(DOCUMENT);
+  });
+
+  it('should not register listeners if platform is not browser', () => {
+    mockPlatform.isBrowser = false;
+
+    component.ngAfterViewInit();
+    expect(component['handleScrollTimeoutID']).toBeFalsy();
+  });
+
+  it('should calculate the correct offsetTop in handleScroll method', () => {
+    component.nzTargetOffset = 50;
+    component.nzOffsetTop = 20;
+    component.nzBounds = 5;
+
+    component.handleScroll();
+
+    expect(component.nzTargetOffset).toBe(50);
+    expect(component.nzOffsetTop).toBe(20);
+  });
+
+  it('should calculate target scroll top correctly and call scrollTo', () => {
+    const mockElement = document.createElement('div');
+    spyOn(mockDocument, 'getElementById').and.returnValue(mockElement);
+    spyOn(mockDocument, 'querySelector').and.returnValue(mockElement);
+    spyOn(scrollService, 'getScroll').and.returnValue(100);
+    spyOn<NzSafeAny>(component, 'getContainer').and.returnValue(window);
+
+    component.nzTargetOffset = undefined;
+    component.nzOffsetTop = undefined;
+
+    const mockLinkComponent = {
+      nzHref: '#test',
+      setActive: jasmine.createSpy('setActive'),
+      getLinkTitleElement: () => document.createElement('a')
+    } as NzSafeAny;
+
+    const scrollToSpy = spyOn(scrollService, 'scrollTo').and.callThrough();
+
+    component.handleScrollTo(mockLinkComponent);
+
+    expect(scrollToSpy).toHaveBeenCalledWith(component['getContainer'](), 100, jasmine.any(Object));
+  });
+});

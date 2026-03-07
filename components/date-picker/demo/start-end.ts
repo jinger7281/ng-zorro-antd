@@ -1,9 +1,11 @@
 import { Component, ViewChild } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
-import { NzDatePickerComponent } from 'ng-zorro-antd/date-picker';
+import { NzDatePickerComponent, NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 
 @Component({
   selector: 'nz-demo-date-picker-start-end',
+  imports: [FormsModule, NzDatePickerModule],
   template: `
     <nz-date-picker
       [nzDisabledDate]="disabledStartDate"
@@ -12,7 +14,7 @@ import { NzDatePickerComponent } from 'ng-zorro-antd/date-picker';
       [(ngModel)]="startValue"
       nzPlaceHolder="Start"
       (nzOnOpenChange)="handleStartOpenChange($event)"
-    ></nz-date-picker>
+    />
     <nz-date-picker
       #endDatePicker
       [nzDisabledDate]="disabledEndDate"
@@ -21,15 +23,13 @@ import { NzDatePickerComponent } from 'ng-zorro-antd/date-picker';
       [(ngModel)]="endValue"
       nzPlaceHolder="End"
       (nzOnOpenChange)="handleEndOpenChange($event)"
-    ></nz-date-picker>
+    />
   `,
-  styles: [
-    `
-      nz-date-picker {
-        margin: 0 8px 12px 0;
-      }
-    `
-  ]
+  styles: `
+    nz-date-picker {
+      margin: 0 8px 12px 0;
+    }
+  `
 })
 export class NzDemoDatePickerStartEndComponent {
   startValue: Date | null = null;

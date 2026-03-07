@@ -1,20 +1,25 @@
-import { BidiModule, Dir } from '@angular/cdk/bidi';
-import { Component, DebugElement, ViewChild } from '@angular/core';
-import { ComponentFixture } from '@angular/core/testing';
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
+
+import { BidiModule, Direction } from '@angular/cdk/bidi';
+import { Component, DebugElement, provideZoneChangeDetection } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 
-import { ComponentBed, createComponentBed } from 'ng-zorro-antd/core/testing/component-bed';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { provideNzIconsTesting } from 'ng-zorro-antd/icon/testing';
 
-import { NzResultComponent } from './result.component';
+import { NzResultComponent, NzResultStatusType } from './result.component';
 import { NzResultModule } from './result.module';
 
 @Component({
-  // eslint-disable-next-line
   selector: 'nz-test-basic-result',
+  imports: [NzIconModule, NzResultModule],
   template: `
     <nz-result [nzIcon]="icon" [nzStatus]="status" [nzTitle]="title" [nzSubTitle]="subtitle" [nzExtra]="extra">
-      <i nz-icon nz-result-icon nzType="up" nzTheme="outline"></i>
+      <nz-icon nz-result-icon nzType="up" nzTheme="outline" />
       <div nz-result-title>Content Title</div>
       <div nz-result-subtitle>Content SubTitle</div>
       <div nz-result-content>Content</div>
@@ -25,36 +30,41 @@ import { NzResultModule } from './result.module';
 export class NzTestResultBasicComponent {
   icon?: string = 'success';
   title?: string = 'Title';
-  status?: string = 'error';
+  status: NzResultStatusType = 'error';
   subtitle?: string = 'SubTitle';
   extra?: string = 'Extra';
 }
 
 @Component({
-  template: `
-    <div [dir]="direction">
-      <nz-test-basic-result></nz-test-basic-result>
-    </div>
-  `
+  imports: [BidiModule, NzTestResultBasicComponent],
+  template: `<nz-test-basic-result [dir]="direction" />`
 })
 export class NzTestResultRtlComponent {
-  @ViewChild(Dir) dir!: Dir;
-  direction = 'rtl';
+  direction: Direction = 'rtl';
+}
+
+@Component({
+  selector: 'nz-test-status-icon-result',
+  imports: [NzResultModule],
+  template: `<nz-result [nzStatus]="status" nzTitle="Test Title" />`
+})
+export class NzTestResultStatusIconComponent {
+  status: NzResultStatusType = 'success';
 }
 
 describe('nz-result', () => {
   describe('basic', () => {
-    let testBed: ComponentBed<NzTestResultBasicComponent>;
     let fixture: ComponentFixture<NzTestResultBasicComponent>;
     let testComponent: NzTestResultBasicComponent;
     let resultEl: DebugElement;
 
     beforeEach(() => {
-      testBed = createComponentBed(NzTestResultBasicComponent, {
-        imports: [NzResultModule, NzIconModule]
+      TestBed.configureTestingModule({
+        providers: [provideNzIconsTesting()]
       });
-      fixture = testBed.fixture;
-      testComponent = testBed.component;
+
+      fixture = TestBed.createComponent(NzTestResultBasicComponent);
+      testComponent = fixture.componentInstance;
       resultEl = fixture.debugElement.query(By.directive(NzResultComponent));
     });
 
@@ -75,12 +85,7 @@ describe('nz-result', () => {
     });
 
     it('should content work', () => {
-      testComponent.icon =
-        testComponent.title =
-        testComponent.subtitle =
-        testComponent.status =
-        testComponent.extra =
-          undefined;
+      testComponent.icon = testComponent.title = testComponent.subtitle = testComponent.extra = undefined;
       fixture.detectChanges();
 
       const iconView = resultEl.nativeElement.querySelector('.ant-result-icon');
@@ -98,28 +103,28 @@ describe('nz-result', () => {
     });
 
     it('should icon overlap status', () => {
-      testComponent.icon = undefined;
+      testComponent.icon = 'smile-o';
       fixture.detectChanges();
 
       const iconView = resultEl.nativeElement.querySelector('.ant-result-icon');
 
       expect(resultEl.nativeElement.classList).toContain('ant-result');
       expect(resultEl.nativeElement.classList).toContain('ant-result-error'); // should status work
-      expect(iconView.firstElementChild.classList).toContain('anticon-close-circle');
+      expect(iconView.firstElementChild.classList).toContain('anticon-smile-o');
     });
   });
 
   describe('RTL', () => {
-    let testBed: ComponentBed<NzTestResultRtlComponent>;
     let fixture: ComponentFixture<NzTestResultRtlComponent>;
     let resultEl: DebugElement;
 
     beforeEach(() => {
-      testBed = createComponentBed(NzTestResultRtlComponent, {
-        imports: [BidiModule, NzResultModule, NzIconModule],
-        declarations: [NzTestResultBasicComponent]
+      // todo: use zoneless
+      TestBed.configureTestingModule({
+        providers: [provideNzIconsTesting(), provideZoneChangeDetection()]
       });
-      fixture = testBed.fixture;
+
+      fixture = TestBed.createComponent(NzTestResultRtlComponent);
       fixture.detectChanges();
       resultEl = fixture.debugElement.query(By.directive(NzResultComponent));
     });
@@ -131,6 +136,54 @@ describe('nz-result', () => {
       fixture.componentInstance.direction = 'ltr';
       fixture.detectChanges();
       expect(resultEl.nativeElement.className).not.toContain('ant-result-rtl');
+    });
+  });
+
+  describe('default icon from status', () => {
+    let fixture: ComponentFixture<NzTestResultStatusIconComponent>;
+    let testComponent: NzTestResultStatusIconComponent;
+    let resultEl: DebugElement;
+
+    beforeEach(() => {
+      TestBed.configureTestingModule({
+        providers: [provideNzIconsTesting()]
+      });
+
+      fixture = TestBed.createComponent(NzTestResultStatusIconComponent);
+      testComponent = fixture.componentInstance;
+      resultEl = fixture.debugElement.query(By.directive(NzResultComponent));
+    });
+
+    it('should show default icon based on status when nzIcon is not provided', () => {
+      testComponent.status = 'success';
+      fixture.detectChanges();
+
+      const iconView = resultEl.nativeElement.querySelector('.ant-result-icon');
+      expect(iconView.firstElementChild.classList).toContain('anticon-check-circle');
+    });
+
+    it('should show info icon when status is info', () => {
+      testComponent.status = 'info';
+      fixture.detectChanges();
+
+      const iconView = resultEl.nativeElement.querySelector('.ant-result-icon');
+      expect(iconView.firstElementChild.classList).toContain('anticon-exclamation-circle');
+    });
+
+    it('should show warning icon when status is warning', () => {
+      testComponent.status = 'warning';
+      fixture.detectChanges();
+
+      const iconView = resultEl.nativeElement.querySelector('.ant-result-icon');
+      expect(iconView.firstElementChild.classList).toContain('anticon-warning');
+    });
+
+    it('should show error icon when status is error', () => {
+      testComponent.status = 'error';
+      fixture.detectChanges();
+
+      const iconView = resultEl.nativeElement.querySelector('.ant-result-icon');
+      expect(iconView.firstElementChild.classList).toContain('anticon-close-circle');
     });
   });
 });

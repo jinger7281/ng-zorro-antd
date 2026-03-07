@@ -3,44 +3,54 @@
  * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
  */
 
+import { isPlatformBrowser } from '@angular/common';
 import {
   AfterContentChecked,
+  ChangeDetectorRef,
+  DestroyRef,
   Directive,
-  ElementRef,
   Input,
+  NgZone,
   OnChanges,
-  OnInit,
-  Optional,
+  PLATFORM_ID,
+  PendingTasks,
   Renderer2,
-  SimpleChanges
+  SimpleChanges,
+  booleanAttribute,
+  inject,
+  numberAttribute
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { animationFrameScheduler, asapScheduler, debounceTime, finalize } from 'rxjs';
 
 import { IconDirective, ThemeType } from '@ant-design/icons-angular';
 
-import { BooleanInput } from 'ng-zorro-antd/core/types';
-import { InputBoolean } from 'ng-zorro-antd/core/util';
+import { warn } from 'ng-zorro-antd/core/logger';
+import { wrapIntoObservable } from 'ng-zorro-antd/core/util';
 
 import { NzIconPatchService, NzIconService } from './icon.service';
 
 @Directive({
-  selector: '[nz-icon]',
+  selector: 'nz-icon,[nz-icon]',
   exportAs: 'nzIcon',
   host: {
-    '[class.anticon]': 'true'
+    class: 'anticon',
+    '[class]': `'anticon-' + type`,
+    '[class.anticon-spin]': `nzSpin || type === 'loading'`,
+    role: 'img',
+    '[attr.aria-label]': 'type'
   }
 })
-export class NzIconDirective extends IconDirective implements OnInit, OnChanges, AfterContentChecked {
-  static ngAcceptInputType_nzSpin: BooleanInput;
+export class NzIconDirective extends IconDirective implements OnChanges, AfterContentChecked {
+  private readonly ngZone = inject(NgZone);
+  private readonly changeDetectorRef = inject(ChangeDetectorRef);
+  public readonly renderer = inject(Renderer2);
+  private destroyRef = inject(DestroyRef);
+  private pendingTasks = inject(PendingTasks);
+  private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
-  cacheClassName: string | null = null;
-  @Input()
-  @InputBoolean()
-  set nzSpin(value: boolean) {
-    this.spin = value;
-  }
-
-  @Input() nzRotate: number = 0;
-
+  @Input({ transform: booleanAttribute }) nzSpin: boolean = false;
+  @Input({ transform: numberAttribute }) nzRotate: number = 0;
   @Input()
   set nzType(value: string) {
     this.type = value;
@@ -65,37 +75,25 @@ export class NzIconDirective extends IconDirective implements OnInit, OnChanges,
 
   private readonly el: HTMLElement;
   private iconfont?: string;
-  private spin: boolean = false;
 
-  constructor(
-    elementRef: ElementRef,
-    public iconService: NzIconService,
-    public renderer: Renderer2,
-    @Optional() iconPatch: NzIconPatchService
-  ) {
-    super(iconService, elementRef, renderer);
-
-    if (iconPatch) {
-      iconPatch.doPatch();
-    }
-
-    this.el = elementRef.nativeElement;
+  constructor(public readonly iconService: NzIconService) {
+    super(iconService);
+    inject(NzIconPatchService, { optional: true })?.doPatch();
+    this.el = this._elementRef.nativeElement;
   }
 
-  ngOnChanges(changes: SimpleChanges): void {
-    const { nzType, nzTwotoneColor, nzSpin, nzTheme, nzRotate } = changes;
+  override ngOnChanges(changes: SimpleChanges): void {
+    const { nzType, nzTwotoneColor, nzTheme, nzRotate, nzSpin } = changes;
 
-    if (nzType || nzTwotoneColor || nzSpin || nzTheme) {
-      this.changeIcon2();
+    if (nzType || nzTwotoneColor || nzTheme || nzSpin) {
+      // This is used to reduce the number of change detections
+      // while the icon is being loaded asynchronously.
+      this.ngZone.runOutsideAngular(() => this.changeIcon2());
     } else if (nzRotate) {
       this.handleRotate(this.el.firstChild as SVGElement);
     } else {
       this._setSVGElement(this.iconService.createIconfontIcon(`#${this.iconfont}`));
     }
-  }
-
-  ngOnInit(): void {
-    this.renderer.setAttribute(this.el, 'class', `anticon ${this.el.className}`.trim());
   }
 
   /**
@@ -120,22 +118,40 @@ export class NzIconDirective extends IconDirective implements OnInit, OnChanges,
    * Replacement of `changeIcon` for more modifications.
    */
   private changeIcon2(): void {
-    this.setClassName();
-    this._changeIcon().then(svgOrRemove => {
-      if (svgOrRemove) {
-        this.setSVGData(svgOrRemove);
-        this.handleSpin(svgOrRemove);
-        this.handleRotate(svgOrRemove);
-      }
-    });
-  }
+    // It is used to hydrate the icon component properly when
+    // zoneless change detection is used in conjunction with server-side rendering.
+    const removeTask = this.pendingTasks.add();
 
-  private handleSpin(svg: SVGElement): void {
-    if (this.spin || this.type === 'loading') {
-      this.renderer.addClass(svg, 'anticon-spin');
-    } else {
-      this.renderer.removeClass(svg, 'anticon-spin');
-    }
+    const svgOrRemove$ = wrapIntoObservable(this._changeIcon()).pipe(
+      // We need to individually debounce the icon rendering on each animation
+      // frame to prevent frame drops when many icons are being rendered on the
+      // page, such as in a `@for` loop.
+      debounceTime(0, this.isBrowser ? animationFrameScheduler : asapScheduler),
+      takeUntilDestroyed(this.destroyRef),
+      finalize(removeTask)
+    );
+
+    svgOrRemove$.subscribe({
+      next: svgOrRemove => {
+        // Get back into the Angular zone after completing all the tasks.
+        // Since we manually run change detection locally, we have to re-enter
+        // the zone because the change detection might also be run on other local
+        // components, leading them to handle template functions outside of the Angular zone.
+        this.ngZone.run(() => {
+          // The _changeIcon method would call Renderer to remove the element of the old icon,
+          // which would call `markElementAsRemoved` eventually,
+          // so we should call `detectChanges` to tell Angular remove the DOM node.
+          // #7186
+          this.changeDetectorRef.detectChanges();
+
+          if (svgOrRemove) {
+            this.setSVGData(svgOrRemove);
+            this.handleRotate(svgOrRemove);
+          }
+        });
+      },
+      error: warn
+    });
   }
 
   private handleRotate(svg: SVGElement): void {
@@ -144,14 +160,6 @@ export class NzIconDirective extends IconDirective implements OnInit, OnChanges,
     } else {
       this.renderer.removeAttribute(svg, 'style');
     }
-  }
-
-  private setClassName(): void {
-    if (this.cacheClassName) {
-      this.renderer.removeClass(this.el, this.cacheClassName);
-    }
-    this.cacheClassName = `anticon-${this.type}`;
-    this.renderer.addClass(this.el, this.cacheClassName);
   }
 
   private setSVGData(svg: SVGElement): void {

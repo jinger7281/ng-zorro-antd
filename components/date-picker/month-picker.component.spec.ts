@@ -1,16 +1,22 @@
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
+
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { registerLocaleData } from '@angular/common';
 import zh from '@angular/common/locales/zh';
-import { Component, DebugElement, TemplateRef, ViewChild } from '@angular/core';
+import { Component, DebugElement, provideZoneChangeDetection, TemplateRef, ViewChild } from '@angular/core';
 import { ComponentFixture, fakeAsync, flush, inject, TestBed, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 
 import isBefore from 'date-fns/isBefore';
 
 import { dispatchFakeEvent, dispatchMouseEvent } from 'ng-zorro-antd/core/testing';
 import { NgStyleInterface } from 'ng-zorro-antd/core/types';
+import { NzDatePickerSizeType } from 'ng-zorro-antd/date-picker/date-picker.component';
 import { getPickerAbstract, getPickerInput } from 'ng-zorro-antd/date-picker/testing/util';
 import { PREFIX_CLASS } from 'ng-zorro-antd/date-picker/util';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -19,21 +25,18 @@ import { NzDatePickerModule } from './date-picker.module';
 
 registerLocaleData(zh);
 
-describe('NzMonthPickerComponent', () => {
+describe('month-picker', () => {
   let fixture: ComponentFixture<NzTestMonthPickerComponent>;
   let fixtureInstance: NzTestMonthPickerComponent;
   let debugElement: DebugElement;
   let overlayContainerElement: HTMLElement;
 
-  beforeEach(fakeAsync(() => {
+  beforeEach(() => {
+    // todo: use zoneless
     TestBed.configureTestingModule({
-      imports: [FormsModule, NoopAnimationsModule, NzDatePickerModule, NzInputModule],
-      providers: [],
-      declarations: [NzTestMonthPickerComponent]
+      providers: [provideNoopAnimations(), provideZoneChangeDetection()]
     });
-
-    TestBed.compileComponents();
-  }));
+  });
 
   beforeEach(() => {
     fixture = TestBed.createComponent(NzTestMonthPickerComponent);
@@ -44,10 +47,6 @@ describe('NzMonthPickerComponent', () => {
   beforeEach(inject([OverlayContainer], (oc: OverlayContainer) => {
     overlayContainerElement = oc.getContainerElement();
   }));
-
-  afterEach(() => {
-    // overlayContainer.ngOnDestroy();
-  });
 
   describe('general api testing', () => {
     beforeEach(() => (fixtureInstance.useSuite = 1));
@@ -137,16 +136,16 @@ describe('NzMonthPickerComponent', () => {
       });
     }));
 
-    it('should support nzCompact', () => {
+    it('should nz-month-picker work', fakeAsync(() => {
       fixtureInstance.useSuite = 4;
-
-      fixture.detectChanges();
-      const pickerInput = getPickerInput(fixture.debugElement);
-      expect(pickerInput).not.toBeNull();
-      const compStyles = window.getComputedStyle(pickerInput);
-      expect(compStyles.getPropertyValue('border-top-right-radius') === '0px').toBeTruthy();
-      expect(compStyles.getPropertyValue('border-bottom-right-radius') === '0px').toBeTruthy();
-    });
+      fixture.whenRenderingDone().then(() => {
+        tick(500);
+        fixture.detectChanges();
+        expect(getPickerContainer()).not.toBeNull();
+        const pickerInput = getPickerInput(fixture.debugElement);
+        expect(pickerInput).not.toBeNull();
+      });
+    }));
 
     it('should support nzDisabledDate', fakeAsync(() => {
       fixture.detectChanges();
@@ -343,10 +342,10 @@ describe('NzMonthPickerComponent', () => {
     }));
   }); // /specified date picker testing
 
-  describe('ngModel value accesors', () => {
+  describe('ngModel value accessors', () => {
     beforeEach(() => (fixtureInstance.useSuite = 3));
 
-    it('should specified date provide by "modelValue" be choosed', fakeAsync(() => {
+    it('should specified date provide by "modelValue" be chosen', fakeAsync(() => {
       fixtureInstance.modelValue = new Date('2018-11');
       fixture.detectChanges();
       flush(); // Wait writeValue() tobe done
@@ -401,41 +400,38 @@ describe('NzMonthPickerComponent', () => {
 });
 
 @Component({
+  imports: [FormsModule, NzDatePickerModule, NzInputModule],
   template: `
-    <ng-container [ngSwitch]="useSuite">
-      <!-- Suite 1 -->
-      <nz-date-picker
-        *ngSwitchCase="1"
-        nzMode="month"
-        [nzAllowClear]="nzAllowClear"
-        [nzAutoFocus]="nzAutoFocus"
-        [nzDisabled]="nzDisabled"
-        [nzDisabledDate]="nzDisabledDate"
-        [nzLocale]="nzLocale"
-        [nzPlaceHolder]="nzPlaceHolder"
-        [nzPopupStyle]="nzPopupStyle"
-        [nzDropdownClassName]="nzDropdownClassName"
-        [nzSize]="nzSize"
-        (nzOnOpenChange)="nzOnOpenChange($event)"
-        [ngModel]="nzValue"
-        (ngModelChange)="nzOnChange($event)"
-        [nzRenderExtraFooter]="nzRenderExtraFooter"
-      ></nz-date-picker>
-      <ng-template #tplExtraFooter>TEST_EXTRA_FOOTER</ng-template>
-
-      <!-- Suite 2 -->
-      <!-- use another picker to avoid nzOpen's side-effects beacuse nzOpen act as "true" if used -->
-      <nz-date-picker nzMode="month" *ngSwitchCase="2" [nzOpen]="nzOpen"></nz-date-picker>
-
-      <!-- Suite 3 -->
-      <nz-date-picker nzMode="month" *ngSwitchCase="3" nzOpen [(ngModel)]="modelValue"></nz-date-picker>
-
-      <!-- Suite 4 -->
-      <nz-input-group *ngSwitchCase="4" nzCompact>
-        <nz-date-picker nzMode="month" style="width: 200px;"></nz-date-picker>
-        <input nz-input type="text" style="width: 200px;" />
-      </nz-input-group>
-    </ng-container>
+    <ng-template #tplExtraFooter>TEST_EXTRA_FOOTER</ng-template>
+    @switch (useSuite) {
+      @case (1) {
+        <nz-date-picker
+          nzMode="month"
+          [nzAllowClear]="nzAllowClear"
+          [nzAutoFocus]="nzAutoFocus"
+          [nzDisabled]="nzDisabled"
+          [nzDisabledDate]="nzDisabledDate"
+          [nzLocale]="nzLocale"
+          [nzPlaceHolder]="nzPlaceHolder"
+          [nzPopupStyle]="nzPopupStyle"
+          [nzDropdownClassName]="nzDropdownClassName"
+          [nzSize]="nzSize"
+          (nzOnOpenChange)="nzOnOpenChange($event)"
+          [ngModel]="nzValue"
+          (ngModelChange)="nzOnChange($event)"
+          [nzRenderExtraFooter]="nzRenderExtraFooter"
+        />
+      }
+      @case (2) {
+        <nz-date-picker nzMode="month" [nzOpen]="nzOpen" />
+      }
+      @case (3) {
+        <nz-date-picker nzMode="month" nzOpen [(ngModel)]="modelValue" />
+      }
+      @case (4) {
+        <nz-month-picker nzOpen />
+      }
+    }
   `
 })
 class NzTestMonthPickerComponent {
@@ -450,7 +446,7 @@ class NzTestMonthPickerComponent {
   nzPlaceHolder!: string;
   nzPopupStyle!: NgStyleInterface;
   nzDropdownClassName!: string;
-  nzSize!: string;
+  nzSize!: NzDatePickerSizeType;
 
   nzOnOpenChange(_: boolean): void {}
 

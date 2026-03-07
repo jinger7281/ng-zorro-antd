@@ -1,7 +1,11 @@
 import { Component } from '@angular/core';
 
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
+
 @Component({
   selector: 'nz-demo-skeleton-children',
+  imports: [NzButtonModule, NzSkeletonModule],
   template: `
     <div class="article">
       <nz-skeleton [nzLoading]="loading">
@@ -14,16 +18,14 @@ import { Component } from '@angular/core';
       <button nz-button (click)="showSkeleton()" [disabled]="loading">Show Skeleton</button>
     </div>
   `,
-  styles: [
-    `
-      .article h4 {
-        margin-bottom: 16px;
-      }
-      .article button {
-        margin-top: 16px;
-      }
-    `
-  ]
+  styles: `
+    .article h4 {
+      margin-bottom: 16px;
+    }
+    .article button {
+      margin-top: 16px;
+    }
+  `
 })
 export class NzDemoSkeletonChildrenComponent {
   loading = false;

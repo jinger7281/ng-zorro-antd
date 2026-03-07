@@ -3,10 +3,11 @@
  * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
  */
 
-import { Directive, ElementRef, Inject, Input, NgZone, Optional } from '@angular/core';
-import { ANIMATION_MODULE_TYPE } from '@angular/platform-browser/animations';
+import { coerceCssPixelValue } from '@angular/cdk/coercion';
+import { Directive, ElementRef, NgZone, inject, input } from '@angular/core';
 
-import { reqAnimFrame } from 'ng-zorro-antd/core/polyfill';
+import { isAnimationEnabled } from 'ng-zorro-antd/core/animation';
+import { requestAnimationFrame } from 'ng-zorro-antd/core/polyfill';
 
 import { NzTabPositionMode } from './interfaces';
 
@@ -14,58 +15,34 @@ import { NzTabPositionMode } from './interfaces';
   selector: 'nz-tabs-ink-bar, [nz-tabs-ink-bar]',
   host: {
     class: 'ant-tabs-ink-bar',
-    '[class.ant-tabs-ink-bar-animated]': '_animated'
+    '[class.ant-tabs-ink-bar-animated]': 'animationEnabled()'
   }
 })
 export class NzTabsInkBarDirective {
-  @Input() position: NzTabPositionMode = 'horizontal';
-  @Input() animated = true;
+  private readonly ngZone = inject(NgZone);
+  private readonly el = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
-  get _animated(): boolean {
-    return this.animationMode !== 'NoopAnimations' && this.animated;
-  }
-
-  constructor(
-    private elementRef: ElementRef<HTMLElement>,
-    private ngZone: NgZone,
-    @Optional() @Inject(ANIMATION_MODULE_TYPE) public animationMode?: string
-  ) {}
+  readonly position = input<NzTabPositionMode>('horizontal');
+  readonly animated = input(true);
+  protected readonly animationEnabled = isAnimationEnabled(() => this.animated());
 
   alignToElement(element: HTMLElement): void {
     this.ngZone.runOutsideAngular(() => {
-      reqAnimFrame(() => this.setStyles(element));
+      requestAnimationFrame(() => this.setStyles(element));
     });
   }
 
   setStyles(element: HTMLElement): void {
-    const inkBar: HTMLElement = this.elementRef.nativeElement;
-
-    if (this.position === 'horizontal') {
-      inkBar.style.top = '';
-      inkBar.style.height = '';
-      inkBar.style.left = this.getLeftPosition(element);
-      inkBar.style.width = this.getElementWidth(element);
+    if (this.position() === 'horizontal') {
+      this.el.style.top = '';
+      this.el.style.height = '';
+      this.el.style.left = coerceCssPixelValue(element?.offsetLeft || 0);
+      this.el.style.width = coerceCssPixelValue(element?.offsetWidth || 0);
     } else {
-      inkBar.style.left = '';
-      inkBar.style.width = '';
-      inkBar.style.top = this.getTopPosition(element);
-      inkBar.style.height = this.getElementHeight(element);
+      this.el.style.left = '';
+      this.el.style.width = '';
+      this.el.style.top = coerceCssPixelValue(element?.offsetTop || 0);
+      this.el.style.height = coerceCssPixelValue(element?.offsetHeight || 0);
     }
-  }
-
-  getLeftPosition(element: HTMLElement): string {
-    return element ? `${element.offsetLeft || 0}px` : '0';
-  }
-
-  getElementWidth(element: HTMLElement): string {
-    return element ? `${element.offsetWidth || 0}px` : '0';
-  }
-
-  getTopPosition(element: HTMLElement): string {
-    return element ? `${element.offsetTop || 0}px` : '0';
-  }
-
-  getElementHeight(element: HTMLElement): string {
-    return element ? `${element.offsetHeight || 0}px` : '0';
   }
 }

@@ -1,9 +1,14 @@
 import { Component, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
-import { TransferChange, TransferItem, TransferSelectChange } from 'ng-zorro-antd/transfer';
+import { NzSwitchModule } from 'ng-zorro-antd/switch';
+import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzTransferModule, TransferChange, TransferItem, TransferSelectChange } from 'ng-zorro-antd/transfer';
 
 @Component({
   selector: 'nz-demo-transfer-table-transfer',
+  imports: [FormsModule, NzSwitchModule, NzTableModule, NzTagModule, NzTransferModule],
   template: `
     <nz-transfer
       [nzDataSource]="list"
@@ -33,36 +38,42 @@ import { TransferChange, TransferItem, TransferSelectChange } from 'ng-zorro-ant
                 (nzCheckedChange)="onItemSelectAll($event)"
               ></th>
               <th>Name</th>
-              <th *ngIf="direction === 'left'">Tag</th>
+              @if (direction === 'left') {
+                <th>Tag</th>
+              }
               <th>Description</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let data of t.data" (click)="onItemSelect(data)">
-              <td
-                [nzChecked]="!!data.checked"
-                [nzDisabled]="disabled || data.disabled"
-                (nzCheckedChange)="onItemSelect(data)"
-              ></td>
-              <td>{{ data.title }}</td>
-              <td *ngIf="direction === 'left'">
-                <nz-tag>{{ data.tag }}</nz-tag>
-              </td>
-              <td>{{ data.description }}</td>
-            </tr>
+            @for (data of t.data; track data) {
+              <tr (click)="onItemSelect(data)">
+                <td
+                  [nzChecked]="!!data.checked"
+                  [nzDisabled]="disabled || data.disabled"
+                  (nzCheckedChange)="onItemSelect(data)"
+                ></td>
+                <td>{{ data.title }}</td>
+                @if (direction === 'left') {
+                  <td>
+                    <nz-tag>{{ data.tag }}</nz-tag>
+                  </td>
+                }
+                <td>{{ data.description }}</td>
+              </tr>
+            }
           </tbody>
         </nz-table>
       </ng-template>
     </nz-transfer>
     <div style="margin-top: 8px;">
-      <nz-switch [(ngModel)]="disabled" nzCheckedChildren="disabled" nzUnCheckedChildren="disabled"></nz-switch>
-      <nz-switch [(ngModel)]="showSearch" nzCheckedChildren="showSearch" nzUnCheckedChildren="showSearch"></nz-switch>
+      <nz-switch [(ngModel)]="disabled" nzCheckedChildren="disabled" nzUnCheckedChildren="disabled" />
+      <nz-switch [(ngModel)]="showSearch" nzCheckedChildren="showSearch" nzUnCheckedChildren="showSearch" />
     </div>
   `
 })
 export class NzDemoTransferTableTransferComponent implements OnInit {
   list: TransferItem[] = [];
-  $asTransferItems = (data: unknown) => data as TransferItem[];
+  $asTransferItems = (data: unknown): TransferItem[] => data as TransferItem[];
   disabled = false;
   showSearch = false;
 
@@ -88,7 +99,7 @@ export class NzDemoTransferTableTransferComponent implements OnInit {
   change(ret: TransferChange): void {
     console.log('nzChange', ret);
     const listKeys = ret.list.map(l => l.key);
-    const hasOwnKey = (e: TransferItem) => e.hasOwnProperty('key');
+    const hasOwnKey = (e: TransferItem): boolean => e.hasOwnProperty('key');
     this.list = this.list.map(e => {
       if (listKeys.includes(e.key) && hasOwnKey(e)) {
         if (ret.to === 'left') {

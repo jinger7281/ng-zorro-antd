@@ -1,28 +1,31 @@
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
+
 import { OverlayContainer } from '@angular/cdk/overlay';
-import { Component } from '@angular/core';
+import { Component, provideZoneChangeDetection } from '@angular/core';
 import { ComponentFixture, fakeAsync, flush, inject, TestBed, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 
 import { dispatchMouseEvent } from 'ng-zorro-antd/core/testing';
 import { getPickerInput } from 'ng-zorro-antd/date-picker/testing/util';
 
 import { NzDatePickerModule } from './date-picker.module';
 
-describe('NzWeekPickerComponent', () => {
+describe('week-picker', () => {
   let fixture: ComponentFixture<NzTestWeekPickerComponent>;
   let fixtureInstance: NzTestWeekPickerComponent;
   let overlayContainer: OverlayContainer;
   let overlayContainerElement: HTMLElement;
 
-  beforeEach(fakeAsync(() => {
+  beforeEach(() => {
+    // todo: use zoneless
     TestBed.configureTestingModule({
-      imports: [NoopAnimationsModule, NzDatePickerModule, FormsModule],
-      declarations: [NzTestWeekPickerComponent]
+      providers: [provideNoopAnimations(), provideZoneChangeDetection()]
     });
-
-    TestBed.compileComponents();
-  }));
+  });
 
   beforeEach(inject([OverlayContainer], (oc: OverlayContainer) => {
     overlayContainer = oc;
@@ -32,6 +35,9 @@ describe('NzWeekPickerComponent', () => {
   beforeEach(() => {
     fixture = TestBed.createComponent(NzTestWeekPickerComponent);
     fixtureInstance = fixture.componentInstance;
+    // set initial mode
+    fixtureInstance.useSuite = 1;
+    fixture.detectChanges();
   });
 
   afterEach(() => {
@@ -69,6 +75,18 @@ describe('NzWeekPickerComponent', () => {
     expect(queryFromOverlay('.ant-picker-week-panel')).toBeTruthy();
   }));
 
+  it('should show week num', fakeAsync(() => {
+    fixtureInstance.useSuite = 2;
+    fixture.whenRenderingDone().then(() => {
+      tick(500);
+      fixture.detectChanges();
+      fixtureInstance.nzFormat = undefined; // cover branch
+      fixture.detectChanges();
+      openPickerByClickTrigger();
+      expect(queryFromOverlay('.ant-picker-week-panel-row .ant-picker-cell-week')).toBeDefined();
+    });
+  }));
+
   ////////////
 
   function queryFromOverlay(selector: string): HTMLElement {
@@ -84,9 +102,20 @@ describe('NzWeekPickerComponent', () => {
 });
 
 @Component({
-  template: ` <nz-date-picker nzMode="week" [nzFormat]="nzFormat" [ngModel]="nzValue"></nz-date-picker> `
+  imports: [NzDatePickerModule, FormsModule],
+  template: `
+    @switch (useSuite) {
+      @case (1) {
+        <nz-date-picker nzMode="week" [nzFormat]="nzFormat!" [ngModel]="nzValue" />
+      }
+      @case (2) {
+        <nz-week-picker [ngModel]="nzValue" />
+      }
+    }
+  `
 })
 export class NzTestWeekPickerComponent {
+  useSuite!: 1 | 2;
   nzFormat?: string;
   nzValue: Date | null = null;
 }

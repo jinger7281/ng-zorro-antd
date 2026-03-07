@@ -4,7 +4,8 @@
  */
 
 import { MediaMatcher } from '@angular/cdk/layout';
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable } from 'rxjs';
 import { distinctUntilChanged, map, startWith } from 'rxjs/operators';
 
@@ -19,8 +20,8 @@ export enum NzBreakpointEnum {
   xs = 'xs'
 }
 
-export type BreakpointMap = { [key in NzBreakpointEnum]: string };
-export type BreakpointBooleanMap = { [key in NzBreakpointEnum]: boolean };
+export type BreakpointMap = Record<NzBreakpointEnum, string>;
+export type BreakpointBooleanMap = Record<NzBreakpointEnum, boolean>;
 export type NzBreakpointKey = keyof typeof NzBreakpointEnum;
 
 export const gridResponsiveMap: BreakpointMap = {
@@ -45,16 +46,23 @@ export const siderResponsiveMap: BreakpointMap = {
   providedIn: 'root'
 })
 export class NzBreakpointService {
-  constructor(private resizeService: NzResizeService, private mediaMatcher: MediaMatcher) {
-    this.resizeService.subscribe().subscribe(() => {});
+  private resizeService = inject(NzResizeService);
+  private mediaMatcher = inject(MediaMatcher);
+
+  constructor() {
+    this.resizeService
+      .connect()
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => {});
   }
 
   subscribe(breakpointMap: BreakpointMap): Observable<NzBreakpointEnum>;
   subscribe(breakpointMap: BreakpointMap, fullMap: true): Observable<BreakpointBooleanMap>;
   subscribe(breakpointMap: BreakpointMap, fullMap?: true): Observable<NzBreakpointEnum | BreakpointBooleanMap> {
     if (fullMap) {
+      // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
       const get = () => this.matchMedia(breakpointMap, true);
-      return this.resizeService.subscribe().pipe(
+      return this.resizeService.connect().pipe(
         map(get),
         startWith(get()),
         distinctUntilChanged(
@@ -63,8 +71,9 @@ export class NzBreakpointService {
         map(x => x[1])
       );
     } else {
+      // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
       const get = () => this.matchMedia(breakpointMap);
-      return this.resizeService.subscribe().pipe(map(get), startWith(get()), distinctUntilChanged());
+      return this.resizeService.connect().pipe(map(get), startWith(get()), distinctUntilChanged());
     }
   }
 

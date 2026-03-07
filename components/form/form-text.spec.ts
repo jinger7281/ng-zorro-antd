@@ -1,28 +1,22 @@
-import { Component, DebugElement } from '@angular/core';
-import { By } from '@angular/platform-browser';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
 
-import { ɵComponentBed as ComponentBed, ɵcreateComponentBed as createComponentBed } from 'ng-zorro-antd/core/testing';
+import { TestBed } from '@angular/core/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 
-import { NzFormTextComponent } from './form-text.component';
-
-const testBedOptions = { imports: [NoopAnimationsModule], declarations: [NzFormTextComponent] };
+import { NzFormTextComponent } from 'ng-zorro-antd/form/form-text.component';
 
 describe('nz-form-text', () => {
-  describe('default', () => {
-    let testBed: ComponentBed<NzTestFormTextComponent>;
-    let text: DebugElement;
-    beforeEach(() => {
-      testBed = createComponentBed(NzTestFormTextComponent, testBedOptions);
-      text = testBed.fixture.debugElement.query(By.directive(NzFormTextComponent));
-    });
-    it('should className correct', () => {
-      expect(text.nativeElement.classList).toContain('ant-form-text');
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideNoopAnimations()]
     });
   });
-});
 
-@Component({
-  template: ` <nz-form-text></nz-form-text> `
-})
-export class NzTestFormTextComponent {}
+  it('should className correct', () => {
+    const fixture = TestBed.createComponent(NzFormTextComponent);
+    expect(fixture.nativeElement.classList).toContain('ant-form-text');
+  });
+});

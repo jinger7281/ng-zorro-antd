@@ -1,29 +1,22 @@
-import { Component, DebugElement } from '@angular/core';
-import { By } from '@angular/platform-browser';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
 
-import { ɵComponentBed as ComponentBed, ɵcreateComponentBed as createComponentBed } from 'ng-zorro-antd/core/testing';
+import { TestBed } from '@angular/core/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 
 import { NzFormItemComponent } from './form-item.component';
-import { NzFormModule } from './form.module';
-
-const testBedOptions = { imports: [NzFormModule, NoopAnimationsModule] };
 
 describe('nz-form-item', () => {
-  describe('default', () => {
-    let testBed: ComponentBed<NzTestFormItemComponent>;
-    let formItem: DebugElement;
-    beforeEach(() => {
-      testBed = createComponentBed(NzTestFormItemComponent, testBedOptions);
-      formItem = testBed.fixture.debugElement.query(By.directive(NzFormItemComponent));
-    });
-    it('should className correct', () => {
-      expect(formItem.nativeElement.classList).toContain('ant-form-item');
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideNoopAnimations()]
     });
   });
-});
 
-@Component({
-  template: ` <nz-form-item></nz-form-item> `
-})
-export class NzTestFormItemComponent {}
+  it('should className correct', () => {
+    const fixture = TestBed.createComponent(NzFormItemComponent);
+    expect(fixture.nativeElement.classList).toContain('ant-form-item');
+  });
+});

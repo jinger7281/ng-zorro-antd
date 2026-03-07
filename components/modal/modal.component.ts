@@ -8,22 +8,24 @@ import {
   ChangeDetectorRef,
   Component,
   ContentChild,
+  DestroyRef,
   EventEmitter,
   Input,
   OnChanges,
-  OnDestroy,
   Output,
   SimpleChanges,
   TemplateRef,
   Type,
-  ViewContainerRef
+  ViewContainerRef,
+  booleanAttribute,
+  inject,
+  numberAttribute
 } from '@angular/core';
-import { Observable, Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Observable } from 'rxjs';
 
 import { NzButtonType } from 'ng-zorro-antd/button';
-import { BooleanInput, NzSafeAny } from 'ng-zorro-antd/core/types';
-import { InputBoolean } from 'ng-zorro-antd/core/util';
+import { NzSafeAny } from 'ng-zorro-antd/core/types';
 
 import { NzModalContentDirective } from './modal-content.directive';
 import { NzModalFooterDirective } from './modal-footer.directive';
@@ -40,37 +42,30 @@ import { getConfigFromComponent } from './utils';
   template: ``,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class NzModalComponent<T = NzSafeAny, R = NzSafeAny> implements OnChanges, NzModalLegacyAPI<T, R>, OnDestroy {
-  static ngAcceptInputType_nzMask: BooleanInput;
-  static ngAcceptInputType_nzMaskClosable: BooleanInput;
-  static ngAcceptInputType_nzCloseOnNavigation: BooleanInput;
-  static ngAcceptInputType_nzVisible: BooleanInput;
-  static ngAcceptInputType_nzClosable: BooleanInput;
-  static ngAcceptInputType_nzOkLoading: BooleanInput;
-  static ngAcceptInputType_nzOkDisabled: BooleanInput;
-  static ngAcceptInputType_nzCancelDisabled: BooleanInput;
-  static ngAcceptInputType_nzCancelLoading: BooleanInput;
-  static ngAcceptInputType_nzKeyboard: BooleanInput;
-  static ngAcceptInputType_nzNoAnimation: BooleanInput;
-  static ngAcceptInputType_nzOkDanger: BooleanInput;
-  static ngAcceptInputType_nzCentered: BooleanInput;
+export class NzModalComponent<T extends ModalOptions = NzSafeAny, R = NzSafeAny>
+  implements OnChanges, NzModalLegacyAPI<T, R>
+{
+  private cdr = inject(ChangeDetectorRef);
+  private modal = inject(NzModalService);
+  private viewContainerRef = inject(ViewContainerRef);
+  private destroyRef = inject(DestroyRef);
 
-  @Input() @InputBoolean() nzMask?: boolean;
-  @Input() @InputBoolean() nzMaskClosable?: boolean;
-  @Input() @InputBoolean() nzCloseOnNavigation?: boolean;
-  @Input() @InputBoolean() nzVisible: boolean = false;
-  @Input() @InputBoolean() nzClosable: boolean = true;
-  @Input() @InputBoolean() nzOkLoading: boolean = false;
-  @Input() @InputBoolean() nzOkDisabled: boolean = false;
-  @Input() @InputBoolean() nzCancelDisabled: boolean = false;
-  @Input() @InputBoolean() nzCancelLoading: boolean = false;
-  @Input() @InputBoolean() nzKeyboard: boolean = true;
-  @Input() @InputBoolean() nzNoAnimation = false;
-  @Input() @InputBoolean() nzCentered = false;
+  @Input({ transform: booleanAttribute }) nzMask?: boolean;
+  @Input({ transform: booleanAttribute }) nzMaskClosable?: boolean;
+  @Input({ transform: booleanAttribute }) nzCloseOnNavigation?: boolean;
+  @Input({ transform: booleanAttribute }) nzVisible: boolean = false;
+  @Input({ transform: booleanAttribute }) nzClosable: boolean = true;
+  @Input({ transform: booleanAttribute }) nzOkLoading: boolean = false;
+  @Input({ transform: booleanAttribute }) nzOkDisabled: boolean = false;
+  @Input({ transform: booleanAttribute }) nzCancelDisabled: boolean = false;
+  @Input({ transform: booleanAttribute }) nzCancelLoading: boolean = false;
+  @Input({ transform: booleanAttribute }) nzKeyboard: boolean = true;
+  @Input({ transform: booleanAttribute }) nzNoAnimation = false;
+  @Input({ transform: booleanAttribute }) nzCentered = false;
+  @Input({ transform: booleanAttribute }) nzDraggable = false;
   @Input() nzContent?: string | TemplateRef<{}> | Type<T>;
-  @Input() nzComponentParams?: T;
   @Input() nzFooter?: string | TemplateRef<{}> | Array<ModalButtonOptions<T>> | null;
-  @Input() nzZIndex: number = 1000;
+  @Input({ transform: numberAttribute }) nzZIndex: number = 1000;
   @Input() nzWidth: number | string = 520;
   @Input() nzWrapClassName?: string;
   @Input() nzClassName?: string;
@@ -82,17 +77,21 @@ export class NzModalComponent<T = NzSafeAny, R = NzSafeAny> implements OnChanges
   @Input() nzOkText?: string | null;
   @Input() nzCancelText?: string | null;
   @Input() nzOkType: NzButtonType = 'primary';
-  @Input() @InputBoolean() nzOkDanger: boolean = false;
+  @Input({ transform: booleanAttribute }) nzOkDanger: boolean = false;
   @Input() nzIconType: string = 'question-circle'; // Confirm Modal ONLY
   @Input() nzModalType: ModalTypes = 'default';
   @Input() nzAutofocus: 'ok' | 'cancel' | 'auto' | null = 'auto';
 
-  // TODO(@hsuanxyz) Input will not be supported
+  /**
+   * @note The input usage will be removed in v22.
+   */
   @Input()
   @Output()
   readonly nzOnOk: EventEmitter<T> | OnClickCallback<T> | NzSafeAny = new EventEmitter<T>();
 
-  // TODO(@hsuanxyz) Input will not be supported
+  /**
+   * @note The input usage will be removed in v22.
+   */
   @Input()
   @Output()
   readonly nzOnCancel: EventEmitter<T> | OnClickCallback<T> | NzSafeAny = new EventEmitter<T>();
@@ -119,7 +118,6 @@ export class NzModalComponent<T = NzSafeAny, R = NzSafeAny> implements OnChanges
   }
 
   private modalRef: NzModalRef | null = null;
-  private destroy$ = new Subject<void>();
 
   get afterOpen(): Observable<void> {
     // Observable alias for nzAfterOpen
@@ -131,11 +129,11 @@ export class NzModalComponent<T = NzSafeAny, R = NzSafeAny> implements OnChanges
     return this.nzAfterClose.asObservable();
   }
 
-  constructor(
-    private cdr: ChangeDetectorRef,
-    private modal: NzModalService,
-    private viewContainerRef: ViewContainerRef
-  ) {}
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      this.modalRef?._finishDialogClose();
+    });
+  }
 
   open(): void {
     if (!this.nzVisible) {
@@ -150,7 +148,7 @@ export class NzModalComponent<T = NzSafeAny, R = NzSafeAny> implements OnChanges
       // When the modal is implicitly closed (e.g. closeAll) the nzVisible needs to be set to the correct value and emit.
       this.modalRef.afterClose
         .asObservable()
-        .pipe(takeUntil(this.destroy$))
+        .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe(() => {
           this.close();
         });
@@ -240,11 +238,5 @@ export class NzModalComponent<T = NzSafeAny, R = NzSafeAny> implements OnChanges
         this.close();
       }
     }
-  }
-
-  ngOnDestroy(): void {
-    this.modalRef?._finishDialogClose();
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 }

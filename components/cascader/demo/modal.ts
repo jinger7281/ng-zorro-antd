@@ -1,8 +1,11 @@
 import { Component } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
-import { NzCascaderOption } from 'ng-zorro-antd/cascader';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzCascaderModule, NzCascaderOption } from 'ng-zorro-antd/cascader';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 
-const options = [
+const options: NzCascaderOption[] = [
   {
     value: 'zhejiang',
     label: 'Zhejiang',
@@ -46,6 +49,7 @@ const options = [
 
 @Component({
   selector: 'nz-demo-cascader-modal',
+  imports: [FormsModule, NzButtonModule, NzModalModule, NzCascaderModule],
   template: `
     <nz-modal
       [(nzVisible)]="isVisible"
@@ -53,12 +57,7 @@ const options = [
       (nzOnCancel)="handleCancel($event)"
       (nzOnOk)="handleOk($event)"
     >
-      <nz-cascader
-        *nzModalContent
-        [nzOptions]="nzOptions"
-        [(ngModel)]="values"
-        (ngModelChange)="onChanges($event)"
-      ></nz-cascader>
+      <nz-cascader *nzModalContent [nzOptions]="nzOptions" [(ngModel)]="values" (ngModelChange)="onChanges($event)" />
     </nz-modal>
 
     <button nz-button (click)="open()">Open Dialog</button>

@@ -1,28 +1,22 @@
-import { Component, DebugElement } from '@angular/core';
-import { By } from '@angular/platform-browser';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+/**
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/NG-ZORRO/ng-zorro-antd/blob/master/LICENSE
+ */
 
-import { ɵComponentBed as ComponentBed, ɵcreateComponentBed as createComponentBed } from 'ng-zorro-antd/core/testing';
+import { TestBed } from '@angular/core/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 
 import { NzFormSplitComponent } from './form-split.component';
 
-const testBedOptions = { imports: [NoopAnimationsModule], declarations: [NzFormSplitComponent] };
-
 describe('nz-form-split', () => {
-  describe('default', () => {
-    let testBed: ComponentBed<NzTestFormSplitComponent>;
-    let split: DebugElement;
-    beforeEach(() => {
-      testBed = createComponentBed(NzTestFormSplitComponent, testBedOptions);
-      split = testBed.fixture.debugElement.query(By.directive(NzFormSplitComponent));
-    });
-    it('should className correct', () => {
-      expect(split.nativeElement.classList).toContain('ant-form-split');
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideNoopAnimations()]
     });
   });
-});
 
-@Component({
-  template: ` <nz-form-split></nz-form-split> `
-})
-export class NzTestFormSplitComponent {}
+  it('should className correct', () => {
+    const fixture = TestBed.createComponent(NzFormSplitComponent);
+    expect(fixture.nativeElement.classList).toContain('ant-form-split');
+  });
+});
